@@ -1,12 +1,28 @@
+// Copyright 2020 PingCAP-QE libs Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package crawler
 
 import (
 	"context"
+	"sync"
+
+	"github.com/google/martian/log"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
-	"sync"
 )
 
+// Issue define issue data fetched from github api v4
 type Issue struct {
 	Number githubv4.Int
 	Author struct {
@@ -24,17 +40,19 @@ type Issue struct {
 	Title githubv4.String
 }
 
+// IssueConnection define IssueConnection fetched from github api v4
+type IssueConnection struct {
+	Nodes    []Issue
+	PageInfo struct {
+		EndCursor   githubv4.String
+		HasNextPage bool
+	}
+}
+
 // fetchIssues fetch issues by labels & states
 // More info of issues could be found in https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 func fetchIssues(client *githubv4.Client,
 	owner, name string, labels []string, states []githubv4.IssueState) (*[]Issue, error) {
-	type IssueConnection struct {
-		Nodes    []Issue
-		PageInfo struct {
-			EndCursor   githubv4.String
-			HasNextPage bool
-		}
-	}
 	var query struct {
 		Repository struct {
 			IssueConnection `graphql:"issues(first: 100, after: $commentsCursor, states:$states,filterBy: {labels:$labels})"`
@@ -55,6 +73,7 @@ func fetchIssues(client *githubv4.Client,
 	for {
 		err := client.Query(context.Background(), &query, variables)
 		if err != nil {
+			log.Errorf("fail to fetchIssues: %v", err)
 			return nil, err
 		}
 		issues = append(issues, query.Repository.IssueConnection.Nodes...)
@@ -66,6 +85,7 @@ func fetchIssues(client *githubv4.Client,
 	return &issues, nil
 }
 
+// Comment define Comment fetched from github api v4
 type Comment struct {
 	Body           string
 	ViewerCanReact bool
@@ -97,6 +117,7 @@ func fetchIssueComments(client *githubv4.Client, owner, name string, issueNumber
 	for {
 		err := client.Query(context.Background(), &query, variables)
 		if err != nil {
+			log.Errorf("fail to fetchIssueComments: %v", err)
 			return nil, err
 		}
 		allComments = append(allComments, query.Repository.Issue.Comments.Nodes...)
@@ -108,6 +129,7 @@ func fetchIssueComments(client *githubv4.Client, owner, name string, issueNumber
 	return &allComments, nil
 }
 
+// IssueWithComments define
 type IssueWithComments struct {
 	Issue
 	comments *[]Comment
@@ -128,6 +150,7 @@ func FetchIssueWithComments(client *githubv4.Client, owner, name string, labels 
 	var errs []error
 	wg := sync.WaitGroup{}
 	wg.Add(len(*issues))
+
 	for i, _ := range *issues {
 		go func(index int) {
 			defer wg.Done()
@@ -141,6 +164,7 @@ func FetchIssueWithComments(client *githubv4.Client, owner, name string, labels 
 		}(i)
 	}
 	wg.Wait()
+
 	if len(errs) > 0 {
 		return nil, errs
 	}
