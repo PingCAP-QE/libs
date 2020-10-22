@@ -15,12 +15,9 @@ package crawler
 
 import (
 	"context"
-	"sync"
-	"time"
-
 	"github.com/google/martian/log"
 	"github.com/shurcooL/githubv4"
-	"golang.org/x/oauth2"
+	"sync"
 )
 
 // Issue define issue data fetched from github api v4
@@ -54,7 +51,7 @@ type IssueConnection struct {
 // More info of issues could be found in https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 //If there are empty in labels ,you will not get anything.
 //TODO find way to change it into something like omitempty.
-func fetchIssues(client *githubv4.Client,
+func fetchIssues(client ClientV4,
 	owner, name string, labels []string, states []githubv4.IssueState) (*[]Issue, error) {
 	var query struct {
 		Repository struct {
@@ -77,7 +74,7 @@ func fetchIssues(client *githubv4.Client,
 	var issues []Issue
 
 	for {
-		err := client.Query(context.Background(), &query, variables)
+		err := client.QueryExceedRateLimit(context.Background(), &query, variables)
 		if err != nil {
 			log.Errorf("fail to fetchIssues: %v", err)
 			return nil, err
@@ -99,7 +96,7 @@ type Comment struct {
 
 // fetchIssueComments fetch comments by issues number
 // More info of comments could be found in https://docs.github.com/en/free-pro-team@latest/graphql/reference/interfaces#comment
-func fetchIssueComments(client *githubv4.Client, owner, name string, issueNumber int) (*[]Comment, error) {
+func fetchIssueComments(client ClientV4, owner, name string, issueNumber int) (*[]Comment, error) {
 	var query struct {
 		Repository struct {
 			Issue struct {
@@ -121,7 +118,7 @@ func fetchIssueComments(client *githubv4.Client, owner, name string, issueNumber
 	}
 	var allComments []Comment
 	for {
-		err := client.Query(context.Background(), &query, variables)
+		err := client.QueryExceedRateLimit(context.Background(), &query, variables)
 		if err != nil {
 			log.Errorf("fail to fetchIssueComments: %v", err)
 			return nil, err
@@ -142,7 +139,7 @@ type IssueWithComments struct {
 }
 
 // FetchIssueWithComments fetch issue combined with comments
-func FetchIssueWithComments(client *githubv4.Client, owner, name string, labels []string) (*[]IssueWithComments, []error) {
+func FetchIssueWithComments(client ClientV4, owner, name string, labels []string) (*[]IssueWithComments, []error) {
 	issues, err := fetchIssues(client, owner, name, labels,
 		[]githubv4.IssueState{githubv4.IssueStateClosed, githubv4.IssueStateOpen})
 	if err != nil {
@@ -158,7 +155,6 @@ func FetchIssueWithComments(client *githubv4.Client, owner, name string, labels 
 	wg.Add(len(*issues))
 
 	for i, _ := range *issues {
-		time.Sleep(time.Millisecond * 200)
 		go func(index int) {
 			defer wg.Done()
 			comments, err := fetchIssueComments(client, owner, name, int(issueWithComments[index].Number))
@@ -176,13 +172,4 @@ func FetchIssueWithComments(client *githubv4.Client, owner, name string, labels 
 		return nil, errs
 	}
 	return &issueWithComments, nil
-}
-
-// NewGithubV4Client new clientv4 by github tokens.
-func NewGithubV4Client(token string) *githubv4.Client {
-	src := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
-	)
-	httpClient := oauth2.NewClient(context.Background(), src)
-	return githubv4.NewClient(httpClient)
 }

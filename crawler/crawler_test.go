@@ -15,24 +15,23 @@ package crawler
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/google/go-github/v32/github"
-	"github.com/shurcooL/githubv4"
 )
 
-var clientv4 *githubv4.Client
 var client *github.Client
 
 func init() {
 	token := os.Getenv("GITHUB_TOKEN")
-	clientv4 = NewGithubV4Client(token)
 	client = NewGithubClient(token)
 }
 
 func TestFetchIssueWithComments(t *testing.T) {
-	issueWithComments, errs := FetchIssueWithComments(clientv4, "Andrewmatilde", "demo", []string{"bug"})
+	clientV4 := NewClientV4()
+	issueWithComments, errs := FetchIssueWithComments(clientV4, "Andrewmatilde", "demo", []string{"bug"})
 	if errs != nil {
 		panic(errs[0])
 	}
@@ -49,4 +48,12 @@ func TestFetchIssueWithComments(t *testing.T) {
 		t.Errorf("issueWithComments size : %d; expected %d", len(*issueWithComments), len(issuesDataExpected))
 		return
 	}
+}
+func TestFetchIssueWithComments2(t *testing.T) {
+	clientV4 := NewClientV4()
+	issueWithComments, errs := FetchIssueWithComments(clientV4, "pingcap", "tidb", []string{"type/bug"})
+	if errs != nil {
+		fmt.Println(len(errs))
+	}
+	fmt.Println(issueWithComments)
 }
