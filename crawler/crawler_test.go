@@ -14,29 +14,39 @@
 package crawler
 
 import (
+	"encoding/json"
 	"os"
-	"reflect"
 	"testing"
 
+	"github.com/google/go-github/v32/github"
 	"github.com/shurcooL/githubv4"
 )
 
-var Client *githubv4.Client
+var clientv4 *githubv4.Client
+var client *github.Client
 
 func init() {
 	token := os.Getenv("GITHUB_TOKEN")
-	Client = NewGithubV4Client(token)
+	clientv4 = NewGithubV4Client(token)
+	client = NewGithubClient(token)
 }
 
 func TestFetchIssueWithComments(t *testing.T) {
-	issueWithComments, errs := FetchIssueWithComments(Client, "pingcap", "tidb", []string{"type/bug"})
+	issueWithComments, errs := FetchIssueWithComments(clientv4, "Andrewmatilde", "demo", []string{"bug"})
 	if errs != nil {
 		panic(errs[0])
 	}
 
-	v := reflect.ValueOf(*issueWithComments)
-	for i := 0; i < v.NumField(); i++ {
-		t.Log(v.Type().Field(i).Name, ":", v.Field(i))
-		t.Log("-------------------------")
+	url := *FetchLatestArtifactUrl(client, "Andrewmatilde", "demo")
+	byteList := DownloadAndUnzipArtifact(url)
+	s := byteList[0]
+	var issuesDataExpected []github.Issue
+	err := json.Unmarshal(s, &issuesDataExpected)
+	if err != nil {
+		panic(err)
+	}
+	if len(issuesDataExpected) != len(*issueWithComments) {
+		t.Errorf("issueWithComments size : %d; expected %d", len(*issueWithComments), len(issuesDataExpected))
+		return
 	}
 }
