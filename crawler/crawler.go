@@ -16,6 +16,7 @@ package crawler
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/google/martian/log"
 	"github.com/shurcooL/githubv4"
@@ -51,6 +52,8 @@ type IssueConnection struct {
 
 // fetchIssues fetch issues by labels & states
 // More info of issues could be found in https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
+//If there are empty in labels ,you will not get anything.
+//TODO find way to change it into something like omitempty.
 func fetchIssues(client *githubv4.Client,
 	owner, name string, labels []string, states []githubv4.IssueState) (*[]Issue, error) {
 	var query struct {
@@ -58,10 +61,12 @@ func fetchIssues(client *githubv4.Client,
 			IssueConnection `graphql:"issues(first: 100, after: $commentsCursor, states:$states,filterBy: {labels:$labels})"`
 		} `graphql:"repository(owner: $owner, name: $name)"`
 	}
+
 	labelsV4 := make([]githubv4.String, len(labels))
 	for i, label := range labels {
 		labelsV4[i] = githubv4.String(label)
 	}
+
 	variables := map[string]interface{}{
 		"owner":          githubv4.String(owner),
 		"name":           githubv4.String(name),
@@ -70,6 +75,7 @@ func fetchIssues(client *githubv4.Client,
 		"commentsCursor": (*githubv4.String)(nil),
 	}
 	var issues []Issue
+
 	for {
 		err := client.Query(context.Background(), &query, variables)
 		if err != nil {
@@ -152,6 +158,7 @@ func FetchIssueWithComments(client *githubv4.Client, owner, name string, labels 
 	wg.Add(len(*issues))
 
 	for i, _ := range *issues {
+		time.Sleep(time.Millisecond * 200)
 		go func(index int) {
 			defer wg.Done()
 			comments, err := fetchIssueComments(client, owner, name, int(issueWithComments[index].Number))
@@ -171,7 +178,7 @@ func FetchIssueWithComments(client *githubv4.Client, owner, name string, labels 
 	return &issueWithComments, nil
 }
 
-// NewGithubV4Client new client by github tokens.
+// NewGithubV4Client new clientv4 by github tokens.
 func NewGithubV4Client(token string) *githubv4.Client {
 	src := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
