@@ -27,10 +27,11 @@ var client *github.Client
 func init() {
 	token := os.Getenv("GITHUB_TOKEN")
 	client = NewGithubClient(token)
+	InitGithubV4Client([]string{token})
 }
 
 func TestFetchIssueWithComments(t *testing.T) {
-	clientV4 := NewClientV4()
+	clientV4 := NewGithubV4Client()
 	issueWithComments, errs := FetchIssueWithCommentsByLabels(clientV4, "Andrewmatilde", "demo", []string{"bug"})
 	if errs != nil {
 		panic(errs[0])
@@ -50,7 +51,7 @@ func TestFetchIssueWithComments(t *testing.T) {
 	}
 }
 func TestFetchIssueWithComments2(t *testing.T) {
-	clientV4 := NewClientV4()
+	clientV4 := NewGithubV4Client()
 	issueWithComments, errs := FetchIssueWithCommentsByLabels(clientV4, "pingcap", "tidb", []string{"type/bug"})
 	if errs != nil {
 		fmt.Println(len(errs))

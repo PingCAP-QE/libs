@@ -14,9 +14,10 @@
 package crawler
 
 import (
+	"sync"
+
 	"github.com/google/martian/log"
 	"github.com/shurcooL/githubv4"
-	"sync"
 )
 
 // Issue define issue data fetched from github api v4
@@ -206,4 +207,4 @@ func FetchIssueWithCommentsByLabels(client ClientV4, owner, name string, labels 
 // 3. Use FetchAllQueries to get Query data list
 // 4. Turn query data list into data struct you want
 // 5. Output
-// You can read fetchCommentsByIssuesNumbers & fetchIssuesByLabelsStates as examples
+// You can read fetchCommentsByIssuesNumbers & fetchIssuesByLabelsStates as examples.
