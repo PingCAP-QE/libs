@@ -197,3 +197,13 @@ func FetchIssueWithCommentsByLabels(client ClientV4, owner, name string, labels 
 
 	return &issueWithComments, nil
 }
+
+// The structure of a Query was:
+// 1. Define the graphQL data struct of data you want.
+//		the rule of the graphQL data struct could be found in https://docs.github.com/en/free-pro-team@latest/graphql
+//		and https://github.com/shurcooL/githubv4
+// 2. Define variable input to graphQL
+// 3. Use FetchAllQueries to get Query data list
+// 4. Turn query data list into data struct you want
+// 5. Output
+// You can read fetchCommentsByIssuesNumbers & fetchIssuesByLabelsStates as examples
