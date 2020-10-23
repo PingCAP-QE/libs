@@ -77,26 +77,28 @@ var templates = []string{
 
 // ValidateCommentBody parse comment body and returns a map of errors
 // key of map is field name in bug template, value is error of the field value if any
-func ValidateCommentBody(githubCommentBody string) map[string]error {
-	// hardcoding all field names
+func ValidateCommentBody(githubCommentBody string) map[string][]error {
+	// HARDCODE: hardcoding some field names
 
-	errM := make(map[string]error)
+	// 1. affected versions parse error
+	errM := make(map[string][]error)
 	bugInfo, err := ParseCommentBody(githubCommentBody)
 	if err != nil {
-		errM["Affected versions"] = err
+		errM["AffectedVersions"] = append(errM["AffectedVersions"], err)
 	}
 
-	// if any field's length equals zero, set errM[$fieldname] = ErrFieldEmpty
+	// 2. if any field's length equals zero, append errM[$fieldname] with ErrFieldEmpty
 	v := reflect.ValueOf(*bugInfo)
 	for i := 0; i < v.NumField(); i++ {
 		if v.Field(i).Len() == 0 {
-			errM[v.Type().Field(i).Name] = ErrFieldEmpty
+			errM[v.Type().Field(i).Name] = append(errM[v.Type().Field(i).Name], ErrFieldEmpty)
 		}
 	}
 	delete(errM, "Workaround") // workaround is allowed to be empty
 
+	// 3. there should be no gap between affected-versions and fixed-versions
 	if hasVersionGap(bugInfo) {
-		errM["VersionGap"] = ErrVersionGap
+		errM["FixedVersions"] = append(errM["FixedVersions"], ErrVersionGap)
 	}
 
 	return errM

@@ -39,8 +39,10 @@ func TestValidateCommentBody(t *testing.T) {
 	for _, c := range comments {
 		if ContainsBugTemplate(*c.Body) {
 			fieldErrors := ValidateCommentBody(*c.Body)
-			for k, v := range fieldErrors {
-				t.Logf("%s: %s", k, v.Error())
+			for k, errs := range fieldErrors {
+				for _, e := range errs {
+					t.Logf("%s: %s", k, e.Error())
+				}
 			}
 		}
 	}
