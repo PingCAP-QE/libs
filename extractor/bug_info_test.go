@@ -28,6 +28,24 @@ func must(err error) {
 	}
 }
 
+func TestValidateCommentBody(t *testing.T) {
+	owner := "pingcap"
+	repo := "tidb"
+	issueNum := 18792
+
+	comments, _, err := client.Issues.ListComments(context.TODO(), owner, repo, issueNum, nil)
+	must(err)
+
+	for _, c := range comments {
+		if ContainsBugTemplate(*c.Body) {
+			fieldErrors := ValidateCommentBody(*c.Body)
+			for k, v := range fieldErrors {
+				t.Logf("%s: %s", k, v.Error())
+			}
+		}
+	}
+}
+
 func TestParseCommentBodyFromIssue(t *testing.T) {
 	owner := "pingcap"
 	repo := "tidb"

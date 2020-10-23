@@ -3,6 +3,7 @@ package extractor
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -11,7 +12,9 @@ import (
 
 var (
 	ErrInvalidVersionInterval = errors.New("invalid version interval")
+	ErrInvalidSemver          = errors.New("Invalid semver")
 	ErrVersionGap             = errors.New("missing some versions between affected-version & fixed-version")
+	ErrFieldEmpty             = errors.New("field is empty")
 )
 
 var githubIssueCommentTemplate = regexp.MustCompile(`<!--(.*?\s*)*?-->`)
@@ -72,6 +75,33 @@ var templates = []string{
 	"#### 6. Fixed versions",
 }
 
+// ValidateCommentBody parse comment body and returns a map of errors
+// key of map is field name in bug template, value is error of the field value if any
+func ValidateCommentBody(githubCommentBody string) map[string]error {
+	// hardcoding all field names
+
+	errM := make(map[string]error)
+	bugInfo, err := ParseCommentBody(githubCommentBody)
+	if err != nil {
+		errM["Affected versions"] = err
+	}
+
+	// if any field's length equals zero, set errM[$fieldname] = ErrFieldEmpty
+	v := reflect.ValueOf(*bugInfo)
+	for i := 0; i < v.NumField(); i++ {
+		if v.Field(i).Len() == 0 {
+			errM[v.Type().Field(i).Name] = ErrFieldEmpty
+		}
+	}
+	delete(errM, "Workaround") // workaround is allowed to be empty
+
+	if hasVersionGap(bugInfo) {
+		errM["VersionGap"] = ErrVersionGap
+	}
+
+	return errM
+}
+
 // ParseCommentBody extract BugInfos from githubCommentBody comment
 func ParseCommentBody(githubCommentBody string) (*BugInfos, error) {
 	githubCommentBody = cleanupComment(githubCommentBody)
@@ -114,17 +144,17 @@ func ParseCommentBody(githubCommentBody string) (*BugInfos, error) {
 		}
 	}
 
-	return info, validateInfo(info)
+	return info, nil
 }
 
-func validateInfo(info *BugInfos) error {
+func hasVersionGap(info *BugInfos) bool {
 
 	// make sure there is no gap between affected-versions and fix-versions
 	// e.g. affect-version = [4.0.1, 4.0.2] fix-version = [4.0.4]
 OUTER:
 	for _, v := range info.FixedVersions {
 		fixed, err := semver.NewVersion(v)
-		if err != nil {
+		if err != nil { // ignore "master"
 			continue
 		}
 
@@ -136,10 +166,10 @@ OUTER:
 			}
 		}
 
-		return ErrVersionGap
+		return true
 	}
 
-	return nil
+	return false
 }
 
 func stripEmpty(s []string) []string {
@@ -176,7 +206,7 @@ func getAffectedVersions(version string) ([]string, error) {
 		case 3: // e.g. [:4.0.5] => [4.0.0:4.0.5]
 			start, err := semver.NewVersion(match[2])
 			if err != nil {
-				return nil, err
+				return nil, ErrInvalidSemver
 			}
 
 			start.Patch = 0
@@ -186,12 +216,12 @@ func getAffectedVersions(version string) ([]string, error) {
 		case 4: // e.g. [4.0.0:4.0.5]
 			start, err := semver.NewVersion(match[1])
 			if err != nil {
-				return nil, err
+				return nil, ErrInvalidSemver
 			}
 
 			end, err := semver.NewVersion(match[3])
 			if err != nil {
-				return nil, err
+				return nil, ErrInvalidSemver
 			}
 
 			if start.Major != end.Major ||
