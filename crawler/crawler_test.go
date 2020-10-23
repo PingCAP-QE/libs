@@ -30,7 +30,7 @@ func init() {
 	InitGithubV4Client([]string{token})
 }
 
-func TestFetchIssueWithComments(t *testing.T) {
+func TestFetchIssueWithComments1(t *testing.T) {
 	clientV4 := NewGithubV4Client()
 	issueWithComments, errs := FetchIssueWithCommentsByLabels(clientV4, "Andrewmatilde", "demo", []string{"bug"})
 	if errs != nil {
