@@ -3,56 +3,36 @@ package crawler
 import (
 	"context"
 	"github.com/google/martian/log"
+	"reflect"
+
 	"github.com/shurcooL/githubv4"
-	"golang.org/x/oauth2"
-	"os"
-	"strings"
 )
 
-var clientV4s []*githubv4.Client
-
-func init() {
-	initGithubV4ClientList()
+type PageInfo struct {
+	EndCursor   githubv4.String
+	HasNextPage bool
 }
 
-func initGithubV4ClientList() {
-	sysTokens := os.Getenv("GITHUB_TOKENS")
-	tokens := strings.Split(sysTokens, ":")
-	clientV4s = make([]*githubv4.Client, len(tokens))
-	for i, token := range tokens {
-		clientV4s[i] = NewGithubV4Client(token)
-	}
+type Query interface {
+	GetPageInfo() PageInfo
 }
 
-// NewGithubV4Client new clientv4 by github tokens.
-func NewGithubV4Client(token string) *githubv4.Client {
-	src := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
-	)
-	httpClient := oauth2.NewClient(context.Background(), src)
-	return githubv4.NewClient(httpClient)
-}
-
-type ClientV4 struct {
-	client *githubv4.Client
-	index  int
-}
-
-func NewClientV4() ClientV4 {
-	return ClientV4{clientV4s[0], 0}
-}
-
-func (c ClientV4) QueryExceedRateLimit(ctx context.Context, q interface{}, variables map[string]interface{}) error {
+// FetchAllQueries just travel all the query among pages.
+// You must input a Query pointer just like it used in fetchIssuesByLabelsStates : FetchAllQueries(client,&query,variables),
+// because query of client need a pointer query input.
+func FetchAllQueries(client ClientV4, q Query, variables map[string]interface{}) ([]Query, error) {
+	var queryList []Query
 	for {
-		err := c.client.Query(ctx, q, variables)
+		err := client.QueryWithClients(context.Background(), q, variables)
 		if err != nil {
-			if c.index == len(clientV4s)-1 {
-				log.Errorf("All tokens has been used.")
-				return err
-			}
-			c.index++
-			c.client = clientV4s[c.index]
+			log.Errorf("Fail to fetch query %v, because: %v", reflect.TypeOf(q), err)
+			return nil, err
 		}
+		queryList = append(queryList, q)
+		if !q.GetPageInfo().HasNextPage {
+			break
+		}
+		variables["commentsCursor"] = githubv4.NewString(q.GetPageInfo().EndCursor)
 	}
-
+	return queryList, nil
 }
