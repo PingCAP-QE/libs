@@ -14,6 +14,7 @@
 package crawler
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/google/martian/log"
@@ -66,10 +67,16 @@ func (q issueQuery) GetPageInfo() PageInfo {
 // fetchIssuesByLabelsStates fetch issues by labels & states
 // More info of issues could be found in https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
 // If there are empty in labels ,you will not get anything.
-// TODO: find way to change it into something like omitempty.
+// TODO: find way to make the input labels work like omitempty.
 func fetchIssuesByLabelsStates(client ClientV4,
 	owner, name string, labels []string, states []githubv4.IssueState) (*[]Issue, error) {
 	var query issueQuery
+
+	if len(labels) == 0 {
+		log.Errorf("If there are empty in labels ,you will not get anything.")
+		err := fmt.Errorf("if there are empty in labels ,you will not get anything from %v/%v", owner, name)
+		return nil, err
+	}
 
 	labelsV4 := make([]githubv4.String, len(labels))
 	for i, label := range labels {
@@ -163,23 +170,32 @@ type IssueWithComments struct {
 
 // FetchIssueWithCommentsByLabels fetch issue combined with comments
 // If there are empty in labels ,you will not get anything.
-func FetchIssueWithCommentsByLabels(client ClientV4, owner, name string, labels []string) (*[]IssueWithComments, []error) {
+func FetchIssueWithCommentsByLabels(client ClientV4, owner, name string, labels []string, count ...int) (*[]IssueWithComments, []error) {
 	issues, err := fetchIssuesByLabelsStates(client, owner, name, labels,
 		[]githubv4.IssueState{githubv4.IssueStateClosed, githubv4.IssueStateOpen})
 	if err != nil {
 		return nil, []error{err}
 	}
-	issueWithComments := make([]IssueWithComments, len(*issues))
-	for i, issue := range *issues {
+	if issues == nil {
+		return nil, nil
+	}
+
+	issuesSize := len(*issues)
+	if count != nil && count[0] < issuesSize {
+		issuesSize = count[0]
+	}
+
+	issueWithComments := make([]IssueWithComments, issuesSize)
+	for i, issue := range (*issues)[0:issuesSize] {
 		issueWithComments[i].Issue = issue
 	}
 
 	var mux sync.Mutex
 	var errs []error
 	wg := sync.WaitGroup{}
-	wg.Add(len(*issues))
+	wg.Add(issuesSize)
 
-	for i := range *issues {
+	for i := range (*issues)[0:issuesSize] {
 		go func(index int) {
 			defer wg.Done()
 			comments, err := fetchCommentsByIssuesNumbers(client, owner, name, int(issueWithComments[index].Number))
