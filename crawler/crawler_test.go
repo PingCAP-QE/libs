@@ -28,7 +28,6 @@ var client *github.Client
 func init() {
 	tokenEnvString := os.Getenv("GITHUB_TOKEN")
 	tokens := strings.Split(tokenEnvString, ":")
-	tokens = []string{"cf8c93fc301cf6e928c45a706d91271048299a7c"}
 	client = NewGithubClient(tokens[0])
 	InitGithubV4Client(tokens)
 }
