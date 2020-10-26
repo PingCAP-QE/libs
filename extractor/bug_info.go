@@ -75,40 +75,12 @@ var templates = []string{
 	"#### 6. Fixed versions",
 }
 
-// ValidateCommentBody parse comment body and returns a map of errors
-// key of map is field name in bug template, value is error of the field value if any
-func ValidateCommentBody(githubCommentBody string) map[string][]error {
-	// HARDCODE: hardcoding some field names
-
-	// 1. affected versions parse error
-	errM := make(map[string][]error)
-	bugInfo, err := ParseCommentBody(githubCommentBody)
-	if err != nil {
-		errM["AffectedVersions"] = append(errM["AffectedVersions"], err)
-	}
-
-	// 2. if any field's length equals zero, append errM[$fieldname] with ErrFieldEmpty
-	v := reflect.ValueOf(*bugInfo)
-	for i := 0; i < v.NumField(); i++ {
-		if v.Field(i).Len() == 0 {
-			errM[v.Type().Field(i).Name] = append(errM[v.Type().Field(i).Name], ErrFieldEmpty)
-		}
-	}
-	delete(errM, "Workaround") // workaround is allowed to be empty
-
-	// 3. there should be no gap between affected-versions and fixed-versions
-	if hasVersionGap(bugInfo) {
-		errM["FixedVersions"] = append(errM["FixedVersions"], ErrVersionGap)
-	}
-
-	return errM
-}
-
 // ParseCommentBody extract BugInfos from githubCommentBody comment
-func ParseCommentBody(githubCommentBody string) (*BugInfos, error) {
+func ParseCommentBody(githubCommentBody string) (*BugInfos, map[string][]error) {
 	githubCommentBody = cleanupComment(githubCommentBody)
 
 	info := &BugInfos{}
+	errM := make(map[string][]error)
 	var startStr, endStr string
 
 	startStr = templates[0]
@@ -132,9 +104,14 @@ func ParseCommentBody(githubCommentBody string) (*BugInfos, error) {
 	versions := getStringInBetween(githubCommentBody, startStr, endStr)
 	expandedVersions, err := getAffectedVersions(versions)
 	if err != nil {
-		return nil, err
+		errM["AffectedVersions"] = append(errM["AffectedVersions"], err)
+	} else {
+		if len(versions) > 0 && len(expandedVersions) == 0 { // has value but didn't match by regexp
+			errM["AffectedVersions"] = append(errM["AffectedVersions"], ErrInvalidSemver)
+		} else {
+			info.AffectedVersions = append(info.AffectedVersions, expandedVersions...)
+		}
 	}
-	info.AffectedVersions = append(info.AffectedVersions, expandedVersions...)
 
 	startStr = templates[5]
 	endStr = "****end****"
@@ -145,8 +122,28 @@ func ParseCommentBody(githubCommentBody string) (*BugInfos, error) {
 			info.FixedVersions[i] = "master"
 		}
 	}
+	if len(versions) > 0 && len(info.FixedVersions) == 0 { // has value but didn't match by regexp
+		errM["FixedVersions"] = append(errM["FixedVersions"], ErrInvalidSemver)
+	}
 
-	return info, nil
+	// HARDCODE: hardcoding some field names
+	// validate result
+
+	// 1. if any field's length equals zero, append errM[$fieldname] with ErrFieldEmpty
+	v := reflect.ValueOf(*info)
+	for i := 0; i < v.NumField(); i++ {
+		if v.Field(i).Len() == 0 {
+			errM[v.Type().Field(i).Name] = append(errM[v.Type().Field(i).Name], ErrFieldEmpty)
+		}
+	}
+	delete(errM, "Workaround") // workaround is allowed to be empty
+
+	// 2. there should be no gap between affected-versions and fixed-versions
+	if hasVersionGap(info) {
+		errM["FixedVersions"] = append(errM["FixedVersions"], ErrVersionGap)
+	}
+
+	return info, errM
 }
 
 func hasVersionGap(info *BugInfos) bool {
