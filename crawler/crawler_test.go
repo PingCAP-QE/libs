@@ -14,29 +14,87 @@
 package crawler
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
-	"reflect"
+	"strings"
 	"testing"
 
-	"github.com/shurcooL/githubv4"
+	"github.com/google/go-github/v32/github"
 )
 
-var Client *githubv4.Client
+var client *github.Client
 
 func init() {
-	token := os.Getenv("GITHUB_TOKEN")
-	Client = NewGithubV4Client(token)
+	tokenEnvString := os.Getenv("GITHUB_TOKEN")
+	tokens := strings.Split(tokenEnvString, ":")
+	client = NewGithubClient(tokens[0])
+	InitGithubV4Client(tokens)
 }
 
-func TestFetchIssueWithComments(t *testing.T) {
-	issueWithComments, errs := FetchIssueWithComments(Client, "pingcap", "tidb", []string{"type/bug"})
+func TestFetchIssueWithCommentsByLabels(t *testing.T) {
+	// get issueWithComments by graphQL githubV4 api
+	clientV4 := NewGithubV4Client()
+	issueWithComments, errs := FetchIssueWithCommentsByLabels(clientV4, "Andrewmatilde", "demo", []string{"bug"})
 	if errs != nil {
 		panic(errs[0])
 	}
 
-	v := reflect.ValueOf(*issueWithComments)
-	for i := 0; i < v.NumField(); i++ {
-		t.Log(v.Type().Field(i).Name, ":", v.Field(i))
-		t.Log("-------------------------")
+	// get issues by artifact
+	url := *FetchLatestArtifactUrl(client, "Andrewmatilde", "demo")
+	byteList := DownloadAndUnzipArtifact(url)
+	s := byteList[0]
+	var issuesDataExpected []github.Issue
+	err := json.Unmarshal(s, &issuesDataExpected)
+	if err != nil {
+		panic(err)
+	}
+
+	// compare length of issues
+	if len(issuesDataExpected) != len(*issueWithComments) {
+		t.Errorf("issueWithComments size : %d; expected %d", len(*issueWithComments), len(issuesDataExpected))
+		return
+	}
+
+	// compare length of comments and find if there are any different issues
+	for _, issueWithComment := range *issueWithComments {
+		hasIssue := false
+		for _, issue := range issuesDataExpected {
+			if *issue.Number == int(issueWithComment.Number) {
+				hasIssue = true
+				if len(*issueWithComment.comments) != issue.GetComments() {
+					t.Errorf("issueWithComment gets different comments size from issue from demo artifact, issue %v.", issue.Title)
+				}
+			}
+		}
+		if hasIssue != true {
+			t.Errorf("FetchIssueWithCommentsByLabels get different issue from demo artifact.")
+		}
+	}
+}
+
+func TestFetchIssueWithCommentsByLabels_Show(t *testing.T) {
+	clientV4 := NewGithubV4Client()
+	issueWithComments, errs := FetchIssueWithCommentsByLabels(clientV4, "pingcap", "tidb", []string{"type/bug"}, 10)
+	if errs != nil {
+		fmt.Println(len(errs))
+		t.Errorf(errs[0].Error())
+	}
+
+	for _, issueWithComment := range *issueWithComments {
+		fmt.Println(issueWithComment)
+	}
+
+	issueWithComments, errs = FetchIssueWithCommentsByLabels(clientV4, "pingcap", "tidb", []string{}, 10)
+	if errs != nil {
+		if len(errs) != 1 {
+			for _, err := range errs {
+				t.Errorf(err.Error())
+			}
+		} else if errs[0].Error() !=
+			fmt.Errorf("if there are empty in labels ,"+
+				"you will not get anything from %s/%s", "pingcap", "tidb").Error() {
+			t.Error(errs[0])
+		}
 	}
 }

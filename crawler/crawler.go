@@ -14,12 +14,11 @@
 package crawler
 
 import (
-	"context"
+	"fmt"
 	"sync"
 
 	"github.com/google/martian/log"
 	"github.com/shurcooL/githubv4"
-	"golang.org/x/oauth2"
 )
 
 // Issue define issue data fetched from github api v4
@@ -49,19 +48,41 @@ type IssueConnection struct {
 	}
 }
 
-// fetchIssues fetch issues by labels & states
-// More info of issues could be found in https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
-func fetchIssues(client *githubv4.Client,
-	owner, name string, labels []string, states []githubv4.IssueState) (*[]Issue, error) {
-	var query struct {
-		Repository struct {
-			IssueConnection `graphql:"issues(first: 100, after: $commentsCursor, states:$states,filterBy: {labels:$labels})"`
-		} `graphql:"repository(owner: $owner, name: $name)"`
+type issueQuery struct {
+	Repository struct {
+		IssueConnection `graphql:"issues(first: 100, after: $commentsCursor, states:$states,filterBy: {labels:$labels})"`
+	} `graphql:"repository(owner: $owner, name: $name)"`
+	RateLimit struct {
+		Limit     githubv4.Int
+		Cost      githubv4.Int
+		Remaining githubv4.Int
+		ResetAt   githubv4.DateTime
 	}
+}
+
+func (q issueQuery) GetPageInfo() PageInfo {
+	return q.Repository.PageInfo
+}
+
+// fetchIssuesByLabelsStates fetch issues by labels & states
+// More info of issues could be found in https://docs.github.com/en/free-pro-team@latest/graphql/reference/objects#issue
+// If there are empty in labels ,you will not get anything.
+// TODO: find way to make the input labels work like omitempty.
+func fetchIssuesByLabelsStates(client ClientV4,
+	owner, name string, labels []string, states []githubv4.IssueState) (*[]Issue, error) {
+	var query issueQuery
+
+	if len(labels) == 0 {
+		log.Errorf("If there are empty in labels ,you will not get anything.")
+		err := fmt.Errorf("if there are empty in labels ,you will not get anything from %v/%v", owner, name)
+		return nil, err
+	}
+
 	labelsV4 := make([]githubv4.String, len(labels))
 	for i, label := range labels {
 		labelsV4[i] = githubv4.String(label)
 	}
+
 	variables := map[string]interface{}{
 		"owner":          githubv4.String(owner),
 		"name":           githubv4.String(name),
@@ -69,19 +90,19 @@ func fetchIssues(client *githubv4.Client,
 		"states":         states,
 		"commentsCursor": (*githubv4.String)(nil),
 	}
-	var issues []Issue
-	for {
-		err := client.Query(context.Background(), &query, variables)
-		if err != nil {
-			log.Errorf("fail to fetchIssues: %v", err)
-			return nil, err
-		}
-		issues = append(issues, query.Repository.IssueConnection.Nodes...)
-		if !query.Repository.IssueConnection.PageInfo.HasNextPage {
-			break
-		}
-		variables["commentsCursor"] = githubv4.NewString(query.Repository.IssueConnection.PageInfo.EndCursor)
+
+	queryList, err := FetchAllQueries(client, &query, variables)
+	if err != nil {
+		log.Errorf(" fetch issue error")
+		return nil, err
 	}
+
+	var issues []Issue
+	for _, query := range queryList {
+		issueQueryInstance := query.(*issueQuery)
+		issues = append(issues, issueQueryInstance.Repository.IssueConnection.Nodes...)
+	}
+
 	return &issues, nil
 }
 
@@ -91,42 +112,54 @@ type Comment struct {
 	ViewerCanReact bool
 }
 
-// fetchIssueComments fetch comments by issues number
-// More info of comments could be found in https://docs.github.com/en/free-pro-team@latest/graphql/reference/interfaces#comment
-func fetchIssueComments(client *githubv4.Client, owner, name string, issueNumber int) (*[]Comment, error) {
-	var query struct {
-		Repository struct {
-			Issue struct {
-				Comments struct {
-					Nodes    []Comment
-					PageInfo struct {
-						EndCursor   githubv4.String
-						HasNextPage bool
-					}
-				} `graphql:"comments(first: 100, after: $commentsCursor)"`
-			} `graphql:"issue(number: $issueNumber)"`
-		} `graphql:"repository(owner: $repositoryOwner, name: $repositoryName)"`
+type commentQuery struct {
+	Repository struct {
+		Issue struct {
+			Comments struct {
+				Nodes    []Comment
+				PageInfo struct {
+					EndCursor   githubv4.String
+					HasNextPage bool
+				}
+			} `graphql:"comments(first: 100, after: $commentsCursor)"`
+		} `graphql:"issue(number: $issueNumber)"`
+	} `graphql:"repository(owner: $repositoryOwner, name: $repositoryName)"`
+	RateLimit struct {
+		Limit     githubv4.Int
+		Cost      githubv4.Int
+		Remaining githubv4.Int
+		ResetAt   githubv4.DateTime
 	}
+}
+
+func (q commentQuery) GetPageInfo() PageInfo {
+	return q.Repository.Issue.Comments.PageInfo
+}
+
+// fetchCommentsByIssuesNumbers fetch comments by issues number
+// More info of comments could be found in https://docs.github.com/en/free-pro-team@latest/graphql/reference/interfaces#comment
+func fetchCommentsByIssuesNumbers(client ClientV4, owner, name string, issueNumber int) (*[]Comment, error) {
+	var query commentQuery
 	variables := map[string]interface{}{
 		"repositoryOwner": githubv4.String(owner),
 		"repositoryName":  githubv4.String(name),
 		"issueNumber":     githubv4.Int(issueNumber),
 		"commentsCursor":  (*githubv4.String)(nil),
 	}
-	var allComments []Comment
-	for {
-		err := client.Query(context.Background(), &query, variables)
-		if err != nil {
-			log.Errorf("fail to fetchIssueComments: %v", err)
-			return nil, err
-		}
-		allComments = append(allComments, query.Repository.Issue.Comments.Nodes...)
-		if !query.Repository.Issue.Comments.PageInfo.HasNextPage {
-			break
-		}
-		variables["commentsCursor"] = githubv4.NewString(query.Repository.Issue.Comments.PageInfo.EndCursor)
+
+	queryList, err := FetchAllQueries(client, &query, variables)
+	if err != nil {
+		log.Errorf("fetch comments error")
+		return nil, err
 	}
-	return &allComments, nil
+
+	var comments []Comment
+	for _, query := range queryList {
+		commentQueryInstance := query.(*commentQuery)
+		comments = append(comments, commentQueryInstance.Repository.Issue.Comments.Nodes...)
+	}
+
+	return &comments, nil
 }
 
 // IssueWithComments define
@@ -135,26 +168,37 @@ type IssueWithComments struct {
 	comments *[]Comment
 }
 
-// FetchIssueWithComments fetch issue combined with comments
-func FetchIssueWithComments(client *githubv4.Client, owner, name string, labels []string) (*[]IssueWithComments, []error) {
-	issues, err := fetchIssues(client, owner, name, labels,
+// FetchIssueWithCommentsByLabels fetch issue combined with comments
+// If there are empty in labels ,you will not get anything.
+func FetchIssueWithCommentsByLabels(client ClientV4, owner, name string, labels []string, count ...int) (*[]IssueWithComments, []error) {
+	issues, err := fetchIssuesByLabelsStates(client, owner, name, labels,
 		[]githubv4.IssueState{githubv4.IssueStateClosed, githubv4.IssueStateOpen})
 	if err != nil {
 		return nil, []error{err}
 	}
-	issueWithComments := make([]IssueWithComments, len(*issues))
-	for i, issue := range *issues {
+	if issues == nil {
+		return nil, nil
+	}
+
+	issuesSize := len(*issues)
+	if count != nil && count[0] < issuesSize {
+		issuesSize = count[0]
+	}
+
+	issueWithComments := make([]IssueWithComments, issuesSize)
+	for i, issue := range (*issues)[0:issuesSize] {
 		issueWithComments[i].Issue = issue
 	}
+
 	var mux sync.Mutex
 	var errs []error
 	wg := sync.WaitGroup{}
-	wg.Add(len(*issues))
+	wg.Add(issuesSize)
 
-	for i, _ := range *issues {
+	for i := range (*issues)[0:issuesSize] {
 		go func(index int) {
 			defer wg.Done()
-			comments, err := fetchIssueComments(client, owner, name, int(issueWithComments[index].Number))
+			comments, err := fetchCommentsByIssuesNumbers(client, owner, name, int(issueWithComments[index].Number))
 			if err != nil {
 				mux.Lock()
 				errs = append(errs, err)
@@ -164,18 +208,19 @@ func FetchIssueWithComments(client *githubv4.Client, owner, name string, labels 
 		}(i)
 	}
 	wg.Wait()
-
 	if len(errs) > 0 {
 		return nil, errs
 	}
+
 	return &issueWithComments, nil
 }
 
-// NewGithubV4Client new client by github tokens.
-func NewGithubV4Client(token string) *githubv4.Client {
-	src := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
-	)
-	httpClient := oauth2.NewClient(context.Background(), src)
-	return githubv4.NewClient(httpClient)
-}
+// The structure of a Query was:
+// 1. Define the graphQL data struct of data you want.
+//		the rule of the graphQL data struct could be found in https://docs.github.com/en/free-pro-team@latest/graphql
+//		and https://github.com/shurcooL/githubv4
+// 2. Define variable input to graphQL
+// 3. Use FetchAllQueries to get Query data list
+// 4. Turn query data list into data struct you want
+// 5. Output
+// You can read fetchCommentsByIssuesNumbers & fetchIssuesByLabelsStates as examples.
