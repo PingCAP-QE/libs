@@ -59,7 +59,7 @@ type IssueConnection struct {
 
 type issueQuery struct {
 	Repository struct {
-		IssueConnection `graphql:"issues(first: 100, after: $commentsCursor, states:$states,filterBy: {labels:$labels})"`
+		IssueConnection `graphql:"issues(first: 100, after: $commentsCursor, states:$states, filterBy: {labels:$labels})"`
 	} `graphql:"repository(owner: $owner, name: $name)"`
 	RateLimit struct {
 		Limit     githubv4.Int
@@ -71,6 +71,10 @@ type issueQuery struct {
 
 func (q issueQuery) GetPageInfo() PageInfo {
 	return q.Repository.PageInfo
+}
+
+func (q issueQuery) GetQuery() Query {
+	return Query(q)
 }
 
 // fetchIssuesByLabelsStates fetch issues by labels & states
@@ -108,7 +112,7 @@ func fetchIssuesByLabelsStates(client ClientV4,
 
 	var issues []Issue
 	for _, query := range queryList {
-		issueQueryInstance := query.(*issueQuery)
+		issueQueryInstance := query.(issueQuery)
 		issues = append(issues, issueQueryInstance.Repository.IssueConnection.Nodes...)
 	}
 
@@ -143,6 +147,10 @@ type commentQuery struct {
 
 func (q commentQuery) GetPageInfo() PageInfo {
 	return q.Repository.Issue.Comments.PageInfo
+}
+
+func (q commentQuery) GetQuery() Query {
+	return Query(q)
 }
 
 // fetchCommentsByIssuesNumbers fetch comments by issues number

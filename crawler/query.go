@@ -28,6 +28,7 @@ type PageInfo struct {
 
 type Query interface {
 	GetPageInfo() PageInfo
+	GetQuery() Query
 }
 
 // FetchAllQueries just travel all the query among pages.
@@ -41,7 +42,8 @@ func FetchAllQueries(client ClientV4, q Query, variables map[string]interface{})
 			log.Errorf("Fail to fetch query %v, because: %v", reflect.TypeOf(q), err)
 			return nil, err
 		}
-		queryList = append(queryList, q)
+
+		queryList = append(queryList, q.GetQuery())
 		if !q.GetPageInfo().HasNextPage {
 			break
 		}
