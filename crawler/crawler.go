@@ -36,7 +36,16 @@ type Issue struct {
 			Name githubv4.String
 		}
 	} `graphql:"labels(first: 100)"`
+
+	Assignees struct {
+		Nodes []struct {
+			Login githubv4.String
+			Email githubv4.String
+		}
+	} `graphql:"assignees(first: 100)"`
+
 	Title githubv4.String
+	Body  githubv4.String
 }
 
 // IssueConnection define IssueConnection fetched from github api v4
@@ -165,7 +174,7 @@ func fetchCommentsByIssuesNumbers(client ClientV4, owner, name string, issueNumb
 // IssueWithComments define
 type IssueWithComments struct {
 	Issue
-	comments *[]Comment
+	Comments *[]Comment
 }
 
 // FetchIssueWithCommentsByLabels fetch issue combined with comments
@@ -204,7 +213,7 @@ func FetchIssueWithCommentsByLabels(client ClientV4, owner, name string, labels 
 				errs = append(errs, err)
 				mux.Unlock()
 			}
-			issueWithComments[index].comments = comments
+			issueWithComments[index].Comments = comments
 		}(i)
 	}
 	wg.Wait()
