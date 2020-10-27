@@ -81,9 +81,7 @@ func TestFetchIssueWithCommentsByLabels_Show(t *testing.T) {
 		t.Errorf(errs[0].Error())
 	}
 
-	for _, issueWithComment := range *issueWithComments {
-		fmt.Println(issueWithComment)
-	}
+	fmt.Println(len(*issueWithComments))
 
 	issueWithComments, errs = FetchIssueWithCommentsByLabels(clientV4, "pingcap", "tidb", []string{}, 10)
 	if errs != nil {
