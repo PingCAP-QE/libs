@@ -172,7 +172,7 @@ func fetchCommentsByIssuesNumbers(client ClientV4, owner, name string, issueNumb
 
 	var comments []Comment
 	for _, query := range queryList {
-		commentQueryInstance := query.(*commentQuery)
+		commentQueryInstance := query.(commentQuery)
 		comments = append(comments, commentQueryInstance.Repository.Issue.Comments.Nodes...)
 	}
 
