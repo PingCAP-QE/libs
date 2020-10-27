@@ -75,7 +75,7 @@ func TestFetchIssueWithCommentsByLabels(t *testing.T) {
 
 func TestFetchIssueWithCommentsByLabels_Show(t *testing.T) {
 	clientV4 := NewGithubV4Client()
-	issueWithComments, errs := FetchIssueWithCommentsByLabels(clientV4, "pingcap", "tidb", []string{"type/bug"}, 10)
+	issueWithComments, errs := FetchIssueWithCommentsByLabels(clientV4, "pingcap", "tidb", []string{"type/bug"})
 	if errs != nil {
 		fmt.Println(len(errs))
 		t.Errorf(errs[0].Error())
