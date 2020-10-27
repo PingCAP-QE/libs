@@ -62,7 +62,7 @@ func TestFetchIssueWithCommentsByLabels(t *testing.T) {
 		for _, issue := range issuesDataExpected {
 			if *issue.Number == int(issueWithComment.Number) {
 				hasIssue = true
-				if len(*issueWithComment.comments) != issue.GetComments() {
+				if len(*issueWithComment.Comments) != issue.GetComments() {
 					t.Errorf("issueWithComment gets different comments size from issue from demo artifact, issue %v.", issue.Title)
 				}
 			}
