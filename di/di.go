@@ -17,10 +17,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 	"time"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // DI constants
@@ -52,12 +53,15 @@ type Issue struct {
 // OpenDB opens a mysql database by dsn, returns a handler
 func OpenDB(dsn string) (*sql.DB, error) {
 	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, err
+	}
 	db.SetConnMaxLifetime(MYSQL_LIFE_TIME)
 	return db, err
 }
 
-// calculateDi returns total DI of specified issues
-func calculateDi(issues []Issue) float64 {
+// calculateDI returns total DI of specified issues
+func calculateDI(issues []Issue) float64 {
 	di := 0.0
 	for _, issue := range issues {
 		severity, ok := issue.Label["severity"]
@@ -160,9 +164,7 @@ func GetCreatedDiBetweenTime(db *sql.DB, startTime, endTime time.Time) (float64,
 		issues = append(issues, issue)
 	}
 
-	fmt.Println(issues)
-
-	di := calculateDi(issues)
+	di := calculateDI(issues)
 
 	return di, nil
 }

@@ -33,9 +33,13 @@ func init() {
 func TestGetLabels(t *testing.T) {
 	issue := Issue{ID: 11}
 	labels, err := getLabels(db, issue)
-	if err != nil || len(labels) != 3 {
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(labels) != 3 {
 		t.Fatal()
 	}
+
 }
 
 func TestCalculateDi(t *testing.T) {
@@ -43,15 +47,15 @@ func TestCalculateDi(t *testing.T) {
 	criticalIssue := Issue{Label: map[string][]string{"severity": {"critical"}}}
 	badIssue := Issue{Label: map[string][]string{"severity": {"unknown"}}}
 
-	if calculateDi([]Issue{minorIssue, criticalIssue}) != MINOR_DI+CRITICAL_DI {
+	if calculateDI([]Issue{minorIssue, criticalIssue}) != MINOR_DI+CRITICAL_DI {
 		t.Fatal()
 	}
 
-	if calculateDi([]Issue{badIssue, criticalIssue}) != CRITICAL_DI {
+	if calculateDI([]Issue{badIssue, criticalIssue}) != CRITICAL_DI {
 		t.Fatal()
 	}
 
-	if calculateDi([]Issue{badIssue}) != 0 {
+	if calculateDI([]Issue{badIssue}) != 0 {
 		t.Fatal()
 	}
 
