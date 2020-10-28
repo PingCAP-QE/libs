@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/coreos/go-semver v0.3.0
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/martian v2.1.0+incompatible
