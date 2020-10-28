@@ -19,8 +19,10 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-github/v32/github"
+	"github.com/shurcooL/githubv4"
 )
 
 var client *github.Client
@@ -35,7 +37,7 @@ func init() {
 func TestFetchIssueWithCommentsByLabels(t *testing.T) {
 	// get issueWithComments by graphQL githubV4 api
 	clientV4 := NewGithubV4Client()
-	issueWithComments, errs := FetchIssueWithCommentsByLabels(clientV4, "Andrewmatilde", "demo", []string{"bug"})
+	issueWithComments, errs := FetchIssueWithCommentsByLabels(clientV4, "Andrewmatilde", "demo", []string{"bug"}, githubv4.DateTime{})
 	if errs != nil {
 		panic(errs[0])
 	}
@@ -75,7 +77,8 @@ func TestFetchIssueWithCommentsByLabels(t *testing.T) {
 
 func TestFetchIssueWithCommentsByLabels_Show(t *testing.T) {
 	clientV4 := NewGithubV4Client()
-	issueWithComments, errs := FetchIssueWithCommentsByLabels(clientV4, "pingcap", "tidb", []string{"type/bug"})
+	since := githubv4.DateTime{Time: time.Now().AddDate(0, 0, -10)}
+	issueWithComments, errs := FetchIssueWithCommentsByLabels(clientV4, "pingcap", "tidb", []string{"type/bug"}, since)
 	if errs != nil {
 		fmt.Println(len(errs))
 		t.Errorf(errs[0].Error())
@@ -83,7 +86,7 @@ func TestFetchIssueWithCommentsByLabels_Show(t *testing.T) {
 
 	fmt.Println(len(*issueWithComments))
 
-	issueWithComments, errs = FetchIssueWithCommentsByLabels(clientV4, "pingcap", "tidb", []string{}, 10)
+	issueWithComments, errs = FetchIssueWithCommentsByLabels(clientV4, "pingcap", "tidb", []string{}, githubv4.DateTime{}, 10)
 	if errs != nil {
 		if len(errs) != 1 {
 			for _, err := range errs {
