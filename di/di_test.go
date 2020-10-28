@@ -15,6 +15,7 @@ package di
 
 import (
 	"database/sql"
+	"os"
 	"testing"
 	"time"
 )
@@ -23,7 +24,7 @@ var db *sql.DB
 
 func init() {
 	var err error
-	db, err = OpenDB("172.16.5.219", "3306", "root", "123456", "GITHUB_INFO")
+	db, err = OpenDB(os.Getenv("MYSQL_DSN"))
 	if err != nil {
 		panic(err)
 	}

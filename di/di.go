@@ -21,8 +21,6 @@ import (
 	"log"
 	"strings"
 	"time"
-
-	"github.com/go-sql-driver/mysql"
 )
 
 // DI constants
@@ -51,10 +49,8 @@ type Issue struct {
 	Label        map[string][]string
 }
 
-// OpenDB opens a mysql database, returns a handler
-func OpenDB(ip, port, username, password, dbName string) (*sql.DB, error) {
-	config := mysql.Config{Net: "tcp", ParseTime: true, AllowNativePasswords: true, Loc: time.Local, User: username, Passwd: password, Addr: ip + ":" + port, DBName: dbName}
-	dsn := config.FormatDSN()
+// OpenDB opens a mysql database by dsn, returns a handler
+func OpenDB(dsn string) (*sql.DB, error) {
 	db, err := sql.Open("mysql", dsn)
 	db.SetConnMaxLifetime(MYSQL_LIFE_TIME)
 	return db, err
