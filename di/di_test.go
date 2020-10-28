@@ -15,19 +15,26 @@ package di
 
 import (
 	"database/sql"
+	"log"
 	"os"
 	"testing"
 	"time"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 var db *sql.DB
 
 func init() {
+	dsn := os.Getenv("MYSQL_DSN")
 	var err error
-	db, err = OpenDB(os.Getenv("MYSQL_DSN"))
+	db, err = sql.Open("mysql", dsn)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
+	db.SetConnMaxLifetime(10 * time.Minute)
+	db.SetMaxIdleConns(10)
+	db.SetMaxOpenConns(10)
 }
 
 func TestGetLabels(t *testing.T) {
@@ -37,26 +44,27 @@ func TestGetLabels(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(labels) != 3 {
-		t.Fatal()
+		t.Fatal(labels)
 	}
-
 }
 
 func TestCalculateDi(t *testing.T) {
 	minorIssue := Issue{Label: map[string][]string{"severity": {"minor"}}}
+	moderateIssue := Issue{Label: map[string][]string{"severity": {"moderate"}}}
+	majorIssue := Issue{Label: map[string][]string{"severity": {"major"}}}
 	criticalIssue := Issue{Label: map[string][]string{"severity": {"critical"}}}
 	badIssue := Issue{Label: map[string][]string{"severity": {"unknown"}}}
 
-	if calculateDI([]Issue{minorIssue, criticalIssue}) != MINOR_DI+CRITICAL_DI {
-		t.Fatal()
+	if di := calculateDI([]Issue{minorIssue, moderateIssue, majorIssue, criticalIssue}); di != MINOR_DI+MODERATE_DI+MAJOR_DI+CRITICAL_DI {
+		t.Fatal(di)
 	}
 
-	if calculateDI([]Issue{badIssue, criticalIssue}) != CRITICAL_DI {
-		t.Fatal()
+	if di := calculateDI([]Issue{badIssue, criticalIssue}); di != CRITICAL_DI {
+		t.Fatal(di)
 	}
 
-	if calculateDI([]Issue{badIssue}) != 0 {
-		t.Fatal()
+	if di := calculateDI([]Issue{badIssue}); di != 0 {
+		t.Fatal(di)
 	}
 
 }
@@ -66,16 +74,16 @@ func TestGetCreatedDiBetweenTime(t *testing.T) {
 	endTime := time.Date(2020, 10, 26, 0, 0, 0, 0, time.Local)
 	di, err := GetCreatedDiBetweenTime(db, startTime, endTime)
 	if err != nil {
-		t.Fatal()
+		t.Fatal(err)
 	}
 	if di != 77 {
-		t.Fatal()
+		t.Fatal(di)
 	}
 
 	startTime = time.Date(2020, 10, 27, 0, 0, 0, 0, time.Local)
 	endTime = time.Date(2020, 10, 26, 0, 0, 0, 0, time.Local)
 	di, err = GetCreatedDiBetweenTime(db, startTime, endTime)
 	if err == nil {
-		t.Fatal()
+		t.Fatal(err)
 	}
 }

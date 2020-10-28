@@ -20,8 +20,6 @@ import (
 	"log"
 	"strings"
 	"time"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 // DI constants
@@ -33,10 +31,7 @@ const (
 )
 
 // MySQL config
-const (
-	MYSQL_QUERY_TIMEOUT = 5 * time.Second
-	MYSQL_LIFE_TIME     = 5 * time.Minute
-)
+const MYSQL_QUERY_TIMEOUT = 5 * time.Second
 
 // Issue struct
 type Issue struct {
@@ -48,16 +43,6 @@ type Issue struct {
 	CreatedAt    time.Time
 	Title        string
 	Label        map[string][]string
-}
-
-// OpenDB opens a mysql database by dsn, returns a handler
-func OpenDB(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		return nil, err
-	}
-	db.SetConnMaxLifetime(MYSQL_LIFE_TIME)
-	return db, err
 }
 
 // calculateDI returns total DI of specified issues
