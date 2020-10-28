@@ -55,11 +55,11 @@ func TestCalculateDi(t *testing.T) {
 	criticalIssue := Issue{Label: map[string][]string{"severity": {"critical"}}}
 	badIssue := Issue{Label: map[string][]string{"severity": {"unknown"}}}
 
-	if di := calculateDI([]Issue{minorIssue, moderateIssue, majorIssue, criticalIssue}); di != MINOR_DI+MODERATE_DI+MAJOR_DI+CRITICAL_DI {
+	if di := calculateDI([]Issue{minorIssue, moderateIssue, majorIssue, criticalIssue}); di != minorDI+moderateDI+majorDI+criticalDI {
 		t.Fatal(di)
 	}
 
-	if di := calculateDI([]Issue{badIssue, criticalIssue}); di != CRITICAL_DI {
+	if di := calculateDI([]Issue{badIssue, criticalIssue}); di != criticalDI {
 		t.Fatal(di)
 	}
 

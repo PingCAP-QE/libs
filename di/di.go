@@ -24,14 +24,14 @@ import (
 
 // DI constants
 const (
-	CRITICAL_DI = 10.0
-	MAJOR_DI    = 3.0
-	MODERATE_DI = 1.0
-	MINOR_DI    = 0.1
+	criticalDI = 10.0
+	majorDI    = 3.0
+	moderateDI = 1.0
+	minorDI    = 0.1
 )
 
 // MySQL config
-const MYSQL_QUERY_TIMEOUT = 5 * time.Second
+const mysqlQueryTimeout = 5 * time.Second
 
 // Issue struct
 type Issue struct {
@@ -62,13 +62,13 @@ func calculateDI(issues []Issue) float64 {
 
 		switch severity[0] {
 		case "critical":
-			di += CRITICAL_DI
+			di += criticalDI
 		case "major":
-			di += MAJOR_DI
+			di += majorDI
 		case "moderate":
-			di += MODERATE_DI
+			di += moderateDI
 		case "minor":
-			di += MINOR_DI
+			di += minorDI
 		default:
 			log.Printf("Issue %v has unsupported severity %s", issue.Number, severity)
 		}
@@ -84,12 +84,12 @@ func getLabels(db *sql.DB, issue Issue) (map[string][]string, error) {
 
 	labels := make(map[string][]string)
 
-	ctx, cancel := context.WithTimeout(context.Background(), MYSQL_QUERY_TIMEOUT)
+	ctx, cancel := context.WithTimeout(context.Background(), mysqlQueryTimeout)
 	defer cancel()
 	rows, err := db.QueryContext(ctx, `SELECT NAME 
-                                            FROM LABEL_ISSUE_RELATIONSHIP, LABEL 
-                                            WHERE LABEL_ISSUE_RELATIONSHIP.ISSUE_ID = ? 
-                                            AND LABEL_ISSUE_RELATIONSHIP.LABEL_ID = LABEL.ID`, issue.ID)
+                                        	  FROM LABEL_ISSUE_RELATIONSHIP, LABEL 
+                                        	  WHERE LABEL_ISSUE_RELATIONSHIP.ISSUE_ID = ? 
+                                       		  AND LABEL_ISSUE_RELATIONSHIP.LABEL_ID = LABEL.ID`, issue.ID)
 
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func GetCreatedDiBetweenTime(db *sql.DB, startTime, endTime time.Time) (float64,
 
 	issues := make([]Issue, 0)
 
-	ctx, cancel := context.WithTimeout(context.Background(), MYSQL_QUERY_TIMEOUT)
+	ctx, cancel := context.WithTimeout(context.Background(), mysqlQueryTimeout)
 	defer cancel()
 	rows, err := db.QueryContext(ctx, "SELECT ID, NUMBER FROM ISSUE WHERE CLOSED = 0 AND CREATED_AT BETWEEN ? AND ?", startTime, endTime)
 
