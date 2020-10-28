@@ -39,6 +39,7 @@ const (
 	MYSQL_LIFE_TIME     = 5 * time.Minute
 )
 
+// Issue struct
 type Issue struct {
 	ID           uint
 	Number       int
@@ -90,6 +91,7 @@ func calculateDi(issues []Issue) float64 {
 	return di
 }
 
+// getLabels returns all labels of an issue, saved in map.
 func getLabels(db *sql.DB, issue Issue) (map[string][]string, error) {
 	if db == nil {
 		return nil, errors.New("db is nil")
