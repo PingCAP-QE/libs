@@ -102,9 +102,9 @@ func getLabels(db *sql.DB, issue Issue) (map[string][]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), MYSQL_QUERY_TIMEOUT)
 	defer cancel()
 	rows, err := db.QueryContext(ctx, `SELECT NAME 
-        									FROM LABEL_ISSUE_RELATIONSHIP, LABEL 
-									        WHERE LABEL_ISSUE_RELATIONSHIP.ISSUE_ID = ? 
-									        	AND LABEL_ISSUE_RELATIONSHIP.LABEL_ID = LABEL.ID`, issue.ID)
+                                            FROM LABEL_ISSUE_RELATIONSHIP, LABEL 
+                                            WHERE LABEL_ISSUE_RELATIONSHIP.ISSUE_ID = ? 
+                                            AND LABEL_ISSUE_RELATIONSHIP.LABEL_ID = LABEL.ID`, issue.ID)
 
 	if err != nil {
 		return nil, err
