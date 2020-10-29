@@ -26,7 +26,7 @@ import (
 var db *sql.DB
 
 func init() {
-	dsn := os.Getenv("MYSQL_DSN")
+	dsn := os.Getenv("GITHUB_DSN")
 	var err error
 	db, err = sql.Open("mysql", dsn)
 	if err != nil {
@@ -38,12 +38,12 @@ func init() {
 }
 
 func TestGetLabels(t *testing.T) {
-	issue := Issue{ID: 11}
+	issue := Issue{ID: 1}
 	labels, err := getLabels(db, issue)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(labels) != 3 {
+	if len(labels) != 1 {
 		t.Fatal(labels)
 	}
 }
@@ -55,11 +55,11 @@ func TestCalculateDi(t *testing.T) {
 	criticalIssue := Issue{Label: map[string][]string{"severity": {"critical"}}}
 	badIssue := Issue{Label: map[string][]string{"severity": {"unknown"}}}
 
-	if di := calculateDI([]Issue{minorIssue, moderateIssue, majorIssue, criticalIssue}); di != MINOR_DI+MODERATE_DI+MAJOR_DI+CRITICAL_DI {
+	if di := calculateDI([]Issue{minorIssue, moderateIssue, majorIssue, criticalIssue}); di != minorDI+moderateDI+majorDI+criticalDI {
 		t.Fatal(di)
 	}
 
-	if di := calculateDI([]Issue{badIssue, criticalIssue}); di != CRITICAL_DI {
+	if di := calculateDI([]Issue{badIssue, criticalIssue}); di != criticalDI {
 		t.Fatal(di)
 	}
 
@@ -70,19 +70,19 @@ func TestCalculateDi(t *testing.T) {
 }
 
 func TestGetCreatedDiBetweenTime(t *testing.T) {
-	startTime := time.Date(2020, 10, 19, 0, 0, 0, 0, time.Local)
-	endTime := time.Date(2020, 10, 26, 0, 0, 0, 0, time.Local)
-	di, err := GetCreatedDiBetweenTime(db, startTime, endTime)
+	startTime := time.Date(2015, 10, 1, 0, 0, 0, 0, time.UTC)
+	endTime := time.Date(2015, 11, 1, 0, 0, 0, 0, time.UTC)
+	di, err := GetCreatedDIBetweenTime(db, startTime, endTime)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if di != 77 {
+	if di != 0.1 {
 		t.Fatal(di)
 	}
 
-	startTime = time.Date(2020, 10, 27, 0, 0, 0, 0, time.Local)
-	endTime = time.Date(2020, 10, 26, 0, 0, 0, 0, time.Local)
-	di, err = GetCreatedDiBetweenTime(db, startTime, endTime)
+	startTime = time.Date(2020, 10, 27, 0, 0, 0, 0, time.UTC)
+	endTime = time.Date(2020, 10, 26, 0, 0, 0, 0, time.UTC)
+	di, err = GetCreatedDIBetweenTime(db, startTime, endTime)
 	if err == nil {
 		t.Fatal(err)
 	}
