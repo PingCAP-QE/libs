@@ -116,6 +116,24 @@ func getLabels(db *sql.DB, issue Issue) (map[string][]string, error) {
     return labels, nil
 }
 
+// parseIssues returns issues parsed from sql.Rows
+func parseIssues(rows *sql.Rows) ([]Issue, error) {
+    issues := make([]Issue, 0)
+
+    for rows.Next() {
+        var issue Issue
+
+        err := rows.Scan(&issue.ID, &issue.Number)
+        if err != nil {
+            return nil, err
+        }
+
+        issues = append(issues, issue)
+    }
+
+    return issues, nil
+}
+
 // GetCreatedDIBetweenTime returns total DI of issues created between startTime and endTime
 func GetCreatedDIBetweenTime(db *sql.DB, startTime, endTime time.Time) (float64, error) {
     if db == nil {
@@ -126,31 +144,61 @@ func GetCreatedDIBetweenTime(db *sql.DB, startTime, endTime time.Time) (float64,
         return 0, errors.New("startTime > endTime")
     }
 
-    issues := make([]Issue, 0)
-
     ctx, cancel := context.WithTimeout(context.Background(), mysqlQueryTimeout)
     defer cancel()
     rows, err := db.QueryContext(ctx, "SELECT ID, NUMBER FROM ISSUE WHERE CREATED_AT BETWEEN ? AND ?", startTime, endTime)
-
     if err != nil {
         return 0, err
     }
 
-    for rows.Next() {
-        var issue Issue
+    issues, err := parseIssues(rows)
+    if err != nil {
+        return 0, err
+    }
 
-        err := rows.Scan(&issue.ID, &issue.Number)
+    for i, _ := range issues {
+        issues[i].Label, err = getLabels(db, issues[i])
         if err != nil {
             return 0, err
         }
-        issue.Label, err = getLabels(db, issue)
-        if err != nil {
-            return 0, err
-        }
-        issues = append(issues, issue)
     }
 
     di := calculateDI(issues)
 
     return di, nil
 }
+
+// GetClosedDIBetweenTime returns total DI of issues closed between startTime and endTime
+func GetClosedDIBetweenTime(db *sql.DB, startTime, endTime time.Time) (float64, error) {
+    if db == nil {
+        return 0, errors.New("db is nil")
+    }
+
+    if startTime.After(endTime) {
+        return 0, errors.New("startTime > endTime")
+    }
+
+    ctx, cancel := context.WithTimeout(context.Background(), mysqlQueryTimeout)
+    defer cancel()
+    rows, err := db.QueryContext(ctx, "SELECT ID, NUMBER FROM ISSUE WHERE CLOSED_AT BETWEEN ? AND ?", startTime, endTime)
+    if err != nil {
+        return 0, err
+    }
+
+    issues, err := parseIssues(rows)
+    if err != nil {
+        return 0, err
+    }
+
+    for i, _ := range issues {
+        issues[i].Label, err = getLabels(db, issues[i])
+        if err != nil {
+            return 0, err
+        }
+    }
+
+    di := calculateDI(issues)
+
+    return di, nil
+}
+

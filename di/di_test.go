@@ -87,3 +87,22 @@ func TestGetCreatedDiBetweenTime(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+func TestGetClosedDiBetweenTime(t *testing.T) {
+	startTime := time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC)
+	endTime := time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC)
+	di, err := GetClosedDIBetweenTime(db, startTime, endTime)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if di != 139.1 {
+		t.Fatal(di)
+	}
+
+	startTime = time.Date(2020, 10, 27, 0, 0, 0, 0, time.UTC)
+	endTime = time.Date(2020, 10, 26, 0, 0, 0, 0, time.UTC)
+	di, err = GetClosedDIBetweenTime(db, startTime, endTime)
+	if err == nil {
+		t.Fatal(err)
+	}
+}
+
