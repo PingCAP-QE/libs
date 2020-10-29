@@ -70,13 +70,13 @@ func TestCalculateDi(t *testing.T) {
 }
 
 func TestGetCreatedDiBetweenTime(t *testing.T) {
-	startTime := time.Date(2020, 10, 19, 0, 0, 0, 0, time.UTC)
-	endTime := time.Date(2020, 10, 26, 0, 0, 0, 0, time.UTC)
+	startTime := time.Date(2015, 10, 1, 0, 0, 0, 0, time.UTC)
+	endTime := time.Date(2015, 11, 1, 0, 0, 0, 0, time.UTC)
 	di, err := GetCreatedDIBetweenTime(db, startTime, endTime)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if di != 99 {
+	if di != 0.1 {
 		t.Fatal(di)
 	}
 
