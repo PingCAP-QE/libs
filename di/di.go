@@ -45,6 +45,7 @@ type Issue struct {
     Label        map[string][]string
 }
 
+
 // calculateDI returns total DI of specified issues
 func calculateDI(issues []Issue) float64 {
     di := 0.0
@@ -78,6 +79,7 @@ func calculateDI(issues []Issue) float64 {
 
 // getLabels returns all labels of an issue, saved in map.
 func getLabels(db *sql.DB, issue Issue) (map[string][]string, error) {
+
     if db == nil {
         return nil, errors.New("db is nil")
     }
@@ -202,3 +204,32 @@ func GetClosedDIBetweenTime(db *sql.DB, startTime, endTime time.Time) (float64, 
     return di, nil
 }
 
+// GetDI returns DI at a specified time
+func GetDI(db *sql.DB, time time.Time) (float64, error) {
+    if db == nil {
+        return 0, errors.New("db is nil")
+    }
+
+    ctx, cancel := context.WithTimeout(context.Background(), mysqlQueryTimeout)
+    defer cancel()
+    rows, err := db.QueryContext(ctx, "SELECT ID, NUMBER FROM ISSUE WHERE CREATED_AT < ? AND (CLOSED = 0 OR CLOSED_AT > ?)", time, time)
+    if err != nil {
+        return 0, err
+    }
+
+    issues, err := parseIssues(rows)
+    if err != nil {
+        return 0, err
+    }
+
+    for i, _ := range issues {
+        issues[i].Label, err = getLabels(db, issues[i])
+        if err != nil {
+            return 0, err
+        }
+    }
+
+    di := calculateDI(issues)
+
+    return di, nil
+}
