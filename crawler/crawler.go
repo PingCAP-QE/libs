@@ -96,6 +96,7 @@ type IssueConnection struct {
 type issueQuery struct {
 	Repository struct {
 		IssueConnection `graphql:"issues(first: 100, after: $commentsCursor, states:$states, filterBy: {labels:$labels,since: $issueDateTime})"`
+		CreatedAt       githubv4.DateTime
 	} `graphql:"repository(owner: $owner, name: $name)"`
 	RateLimit struct {
 		Limit     githubv4.Int
