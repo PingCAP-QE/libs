@@ -56,6 +56,30 @@ type Issue struct {
 				}
 				CreatedAt githubv4.DateTime
 			} `graphql:"... on CrossReferencedEvent"`
+			AssignedEvent struct {
+				Actor struct {
+					Login githubv4.String
+				}
+				Assignee struct {
+					User struct {
+						Login githubv4.String
+						Email githubv4.String
+					} `graphql:"... on User"`
+				}
+				CreatedAt githubv4.DateTime
+			} `graphql:"... on AssignedEvent"`
+			UnassignedEvent struct {
+				Actor struct {
+					Login githubv4.String
+				}
+				Assignee struct {
+					User struct {
+						Login githubv4.String
+						Email githubv4.String
+					} `graphql:"... on User"`
+				}
+				CreatedAt githubv4.DateTime
+			} `graphql:"... on UnassignedEvent"`
 		}
 	} `graphql:"timelineItems(first: 100)"`
 }
