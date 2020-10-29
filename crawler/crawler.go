@@ -23,8 +23,9 @@ import (
 
 // Issue define issue data fetched from github api v4
 type Issue struct {
-	Number githubv4.Int
-	Author struct {
+	DatabaseId githubv4.Int
+	Number     githubv4.Int
+	Author     struct {
 		Login     string
 		AvatarURL string `graphql:"avatarUrl(size: 72)"`
 	}
@@ -43,9 +44,44 @@ type Issue struct {
 			Email githubv4.String
 		}
 	} `graphql:"assignees(first: 100)"`
-
 	Title githubv4.String
 	Body  githubv4.String
+
+	TimelineItems struct {
+		Nodes []struct {
+			Typename             string `graphql:"__typename"`
+			CrossReferencedEvent struct {
+				Actor struct {
+					Login githubv4.String
+				}
+				CreatedAt githubv4.DateTime
+			} `graphql:"... on CrossReferencedEvent"`
+			AssignedEvent struct {
+				Actor struct {
+					Login githubv4.String
+				}
+				Assignee struct {
+					User struct {
+						Login githubv4.String
+						Email githubv4.String
+					} `graphql:"... on User"`
+				}
+				CreatedAt githubv4.DateTime
+			} `graphql:"... on AssignedEvent"`
+			UnassignedEvent struct {
+				Actor struct {
+					Login githubv4.String
+				}
+				Assignee struct {
+					User struct {
+						Login githubv4.String
+						Email githubv4.String
+					} `graphql:"... on User"`
+				}
+				CreatedAt githubv4.DateTime
+			} `graphql:"... on UnassignedEvent"`
+		}
+	} `graphql:"timelineItems(first: 100)"`
 }
 
 // IssueConnection define IssueConnection fetched from github api v4
@@ -59,7 +95,8 @@ type IssueConnection struct {
 
 type issueQuery struct {
 	Repository struct {
-		IssueConnection `graphql:"issues(first: 100, after: $commentsCursor, states:$states, filterBy: {labels:$labels})"`
+		IssueConnection `graphql:"issues(first: 100, after: $commentsCursor, states:$states, filterBy: {labels:$labels,since: $issueDateTime})"`
+		CreatedAt       githubv4.DateTime
 	} `graphql:"repository(owner: $owner, name: $name)"`
 	RateLimit struct {
 		Limit     githubv4.Int
@@ -82,7 +119,7 @@ func (q issueQuery) GetQuery() Query {
 // If there are empty in labels ,you will not get anything.
 // TODO: find way to make the input labels work like omitempty.
 func fetchIssuesByLabelsStates(client ClientV4,
-	owner, name string, labels []string, states []githubv4.IssueState) (*[]Issue, error) {
+	owner, name string, labels []string, states []githubv4.IssueState, since githubv4.DateTime) (*[]Issue, error) {
 	var query issueQuery
 
 	if len(labels) == 0 {
@@ -102,6 +139,7 @@ func fetchIssuesByLabelsStates(client ClientV4,
 		"labels":         labelsV4,
 		"states":         states,
 		"commentsCursor": (*githubv4.String)(nil),
+		"issueDateTime":  since,
 	}
 
 	queryList, err := FetchAllQueries(client, &query, variables)
@@ -121,8 +159,13 @@ func fetchIssuesByLabelsStates(client ClientV4,
 
 // Comment define Comment fetched from github api v4
 type Comment struct {
+	DatabaseId     githubv4.Int
 	Body           string
 	ViewerCanReact bool
+	Author         struct {
+		Login     string
+		AvatarURL string `graphql:"avatarUrl(size: 72)"`
+	}
 }
 
 type commentQuery struct {
@@ -187,9 +230,9 @@ type IssueWithComments struct {
 
 // FetchIssueWithCommentsByLabels fetch issue combined with comments
 // If there are empty in labels ,you will not get anything.
-func FetchIssueWithCommentsByLabels(client ClientV4, owner, name string, labels []string, count ...int) (*[]IssueWithComments, []error) {
+func FetchIssueWithCommentsByLabels(client ClientV4, owner, name string, labels []string, since githubv4.DateTime, count ...int) (*[]IssueWithComments, []error) {
 	issues, err := fetchIssuesByLabelsStates(client, owner, name, labels,
-		[]githubv4.IssueState{githubv4.IssueStateClosed, githubv4.IssueStateOpen})
+		[]githubv4.IssueState{githubv4.IssueStateClosed, githubv4.IssueStateOpen}, since)
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -228,7 +271,6 @@ func FetchIssueWithCommentsByLabels(client ClientV4, owner, name string, labels 
 	if len(errs) > 0 {
 		return nil, errs
 	}
-
 	return &issueWithComments, nil
 }
 
