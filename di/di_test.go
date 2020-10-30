@@ -109,12 +109,12 @@ func TestGetClosedDiBetweenTime(t *testing.T) {
 }
 
 func TestGetDI(t *testing.T) {
-    time := time.Now()
+    time := time.Date(2020, 9, 21, 0, 0, 0, 0, time.UTC)
     di, err := GetDI(db, time)
     if err != nil {
         t.Fatal(err)
     }
-    if math.Abs(di-1322.2) > 1e-6 {
+    if math.Abs(di-1229.3) > 1e-6 {
         t.Fatal(di)
     }
 
