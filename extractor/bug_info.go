@@ -67,12 +67,20 @@ func cleanupComment(s string) string {
 }
 
 var templates = []string{
-	"#### 1. Root Cause Analysis (RCA)",
-	"#### 2. Symptom",
-	"#### 3. All Trigger Conditions",
+	"#### 1. Root Cause Analysis (RCA) (optional)",
+	"#### 2. Symptom (optional)",
+	"#### 3. All Trigger Conditions (optional)",
 	`#### 4. Workaround (optional)`,
 	"#### 5. Affected versions",
 	"#### 6. Fixed versions",
+}
+
+// requiredFields of BugInfos
+// these fields should not be empty
+// key of map should match field name of BugInfos
+var requiredFields = map[string]struct{}{
+	"AffectedVersions": {},
+	"FixedVersions":    {},
 }
 
 // ParseCommentBody extract BugInfos from githubCommentBody comment
@@ -131,12 +139,11 @@ func ParseCommentBody(githubCommentBody string) (*BugInfos, map[string][]error) 
 
 	// 1. if any field's length equals zero, append errM[$fieldname] with ErrFieldEmpty
 	v := reflect.ValueOf(*info)
-	for i := 0; i < v.NumField(); i++ {
-		if v.Field(i).Len() == 0 {
-			errM[v.Type().Field(i).Name] = append(errM[v.Type().Field(i).Name], ErrFieldEmpty)
+	for fieldName := range requiredFields {
+		if v.FieldByName(fieldName).Len() == 0 {
+			errM[fieldName] = append(errM[fieldName], ErrFieldEmpty)
 		}
 	}
-	delete(errM, "Workaround") // workaround is allowed to be empty
 
 	// 2. there should be no gap between affected-versions and fixed-versions
 	if hasVersionGap(info) {
