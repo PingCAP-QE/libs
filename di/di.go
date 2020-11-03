@@ -19,25 +19,25 @@ import (
 )
 
 func ProcessCreatedDI(issueDB, diDB *sql.DB, repo, sig string, startTime, endTime time.Time) error {
-
+    return nil
 }
 
 func ProcessClosedDI(issueDB, diDB *sql.DB, repo, sig string, startTime, endTime time.Time) error {
-
+    return nil
 }
 
 func ProcessDI(issueDB, diDB *sql.DB, repo, sig string, time time.Time) error {
-
+    return nil
 }
 
 func ProcessCreatedDIs(issueDB, diDB *sql.DB, repo, sig string, startTime, endTime time.Time, frequency time.Duration) error {
-
+    return nil
 }
 
 func ProcessClosedDIs(issueDB, diDB *sql.DB, repo, sig string, startTime, endTime time.Time, frequency time.Duration) error {
-
+    return nil
 }
 
 func ProcessDIs(issueDB, diDB *sql.DB, repo, sig string, startTime, endTime time.Time, frequency time.Duration) error {
-
+    return nil
 }

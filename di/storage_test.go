@@ -48,7 +48,6 @@ func clearDB(db *sql.DB) {
         log.Fatal(err)
     }
     tx.Commit()
-    clearDB(diDB)
 }
 
 func TestInsertIntervalDI(t *testing.T) {
@@ -87,7 +86,33 @@ func TestStoreIntervalDI(t *testing.T) {
 func TestStoreInstantDI(t *testing.T) {
     dis := []InstantDI{{time.Now(), 10},
         {time.Now().AddDate(0, 0, -7), 20}}
-    err := storeInstantDI(diDB, "CREATED_DI", "test", dis)
+    err := storeInstantDI(diDB, "DI", "test", dis)
     must(t, err, nil, "err")
     clearDB(diDB)
+}
+
+func TestGetCreatedDiBetweenTime(t *testing.T) {
+    startTime := time.Date(2020, 9, 7, 0, 0, 0, 0, time.UTC)
+    endTime := time.Date(2020, 9, 14, 0, 0, 0, 0, time.UTC)
+    di, err := getCreatedDIBetweenTime(issueDB, "tidb", "execution", startTime, endTime)
+    must(t, err, nil, "err")
+    must(t, di, 3.0, "di")
+
+    startTime = time.Date(2020, 10, 27, 0, 0, 0, 0, time.UTC)
+    endTime = time.Date(2020, 10, 26, 0, 0, 0, 0, time.UTC)
+    _, err = getCreatedDIBetweenTime(issueDB, "", "", startTime, endTime)
+    mustNot(t, err, nil, "err")
+}
+
+func TestGetClosedDiBetweenTime(t *testing.T) {
+    startTime := time.Date(2020, 9, 7, 0, 0, 0, 0, time.UTC)
+    endTime := time.Date(2020, 9, 14, 0, 0, 0, 0, time.UTC)
+    di, err := getClosedDIBetweenTime(issueDB, "tidb", "", startTime, endTime)
+    must(t, err, nil, "err")
+    must(t, di, 107.0, "di")
+
+    startTime = time.Date(2020, 10, 27, 0, 0, 0, 0, time.UTC)
+    endTime = time.Date(2020, 10, 26, 0, 0, 0, 0, time.UTC)
+    di, err = getClosedDIBetweenTime(issueDB, "", "", startTime, endTime)
+    mustNot(t, err, nil, "err")
 }

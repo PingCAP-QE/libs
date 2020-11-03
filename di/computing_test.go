@@ -16,7 +16,6 @@ package di
 import (
     "database/sql"
     "log"
-    "math"
     "os"
     "testing"
     "time"
@@ -71,53 +70,4 @@ func TestCalculateDi(t *testing.T) {
     di = calculateDI([]Issue{badIssue})
     must(t, di, 0.0, "di")
 
-}
-
-func TestGetCreatedDiBetweenTime(t *testing.T) {
-    startTime := time.Date(2015, 10, 1, 0, 0, 0, 0, time.UTC)
-    endTime := time.Date(2015, 11, 1, 0, 0, 0, 0, time.UTC)
-    di, err := getCreatedDIBetweenTime(issueDB, startTime, endTime)
-    must(t, err, nil, "err")
-    must(t, di, 0.1, "di")
-
-    startTime = time.Date(2020, 10, 27, 0, 0, 0, 0, time.UTC)
-    endTime = time.Date(2020, 10, 26, 0, 0, 0, 0, time.UTC)
-    _, err = getCreatedDIBetweenTime(issueDB, startTime, endTime)
-    mustNot(t, err, nil, "err")
-}
-
-func TestGetClosedDiBetweenTime(t *testing.T) {
-    startTime := time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC)
-    endTime := time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC)
-    di, err := getClosedDIBetweenTime(issueDB, startTime, endTime)
-    must(t, err, nil, "err")
-    must(t, di, 139.1, "di")
-
-    startTime = time.Date(2020, 10, 27, 0, 0, 0, 0, time.UTC)
-    endTime = time.Date(2020, 10, 26, 0, 0, 0, 0, time.UTC)
-    di, err = getClosedDIBetweenTime(issueDB, startTime, endTime)
-    mustNot(t, err, nil, "err")
-}
-
-func TestGetCreatedDIsFrom(t *testing.T) {
-    ti := time.Date(2020, 9, 21, 0, 0, 0, 0, time.UTC)
-    dis, err := getCreatedDIsFrom(issueDB, ti, 7*24*time.Hour)
-    must(t, err, nil, "err")
-    must(t, len(dis), 7, `len(dis)`)
-}
-
-func TestGetClosedDIsFrom(t *testing.T) {
-    ti := time.Date(2020, 9, 21, 0, 0, 0, 0, time.UTC)
-    dis, err := getClosedDIsFrom(issueDB, ti, 7*24*time.Hour)
-    must(t, err, nil, "err")
-    must(t, len(dis), 7, `len(dis)`)
-}
-
-func TestGetDI(t *testing.T) {
-    ti := time.Date(2020, 9, 21, 0, 0, 0, 0, time.UTC)
-    di, err := getDI(issueDB, ti)
-    must(t, err, nil, "err")
-    if math.Abs(di-1229.3) > 1e-6 {
-        t.Fatalf("GetDI %v returns %f", ti, di)
-    }
 }
