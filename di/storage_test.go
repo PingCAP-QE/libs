@@ -91,28 +91,28 @@ func TestStoreInstantDI(t *testing.T) {
     clearDB(diDB)
 }
 
-func TestGetCreatedDiBetweenTime(t *testing.T) {
+func TestGetCreatedDi(t *testing.T) {
     startTime := time.Date(2020, 9, 7, 0, 0, 0, 0, time.UTC)
     endTime := time.Date(2020, 9, 14, 0, 0, 0, 0, time.UTC)
-    di, err := getCreatedDIBetweenTime(issueDB, "tidb", "execution", startTime, endTime)
+    di, err := getCreatedDI(issueDB, "tidb", "execution", startTime, endTime)
     must(t, err, nil, "err")
     must(t, di, 3.0, "di")
 
     startTime = time.Date(2020, 10, 27, 0, 0, 0, 0, time.UTC)
     endTime = time.Date(2020, 10, 26, 0, 0, 0, 0, time.UTC)
-    _, err = getCreatedDIBetweenTime(issueDB, "", "", startTime, endTime)
+    _, err = getCreatedDI(issueDB, "", "", startTime, endTime)
     mustNot(t, err, nil, "err")
 }
 
-func TestGetClosedDiBetweenTime(t *testing.T) {
+func TestGetClosedDI(t *testing.T) {
     startTime := time.Date(2020, 9, 7, 0, 0, 0, 0, time.UTC)
     endTime := time.Date(2020, 9, 14, 0, 0, 0, 0, time.UTC)
-    di, err := getClosedDIBetweenTime(issueDB, "tidb", "", startTime, endTime)
+    di, err := getClosedDI(issueDB, "tidb", "", startTime, endTime)
     must(t, err, nil, "err")
     must(t, di, 107.0, "di")
 
     startTime = time.Date(2020, 10, 27, 0, 0, 0, 0, time.UTC)
     endTime = time.Date(2020, 10, 26, 0, 0, 0, 0, time.UTC)
-    di, err = getClosedDIBetweenTime(issueDB, "", "", startTime, endTime)
+    di, err = getClosedDI(issueDB, "", "", startTime, endTime)
     mustNot(t, err, nil, "err")
 }

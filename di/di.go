@@ -19,6 +19,7 @@ import (
 )
 
 func ProcessCreatedDI(issueDB, diDB *sql.DB, repo, sig string, startTime, endTime time.Time) error {
+
     return nil
 }
 

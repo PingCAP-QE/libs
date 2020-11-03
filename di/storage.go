@@ -82,9 +82,9 @@ func generateQuery(query, repo, sig string) string {
     return query
 }
 
-// getCreatedDIBetweenTime returns DI of issues created between startTime and endTime
+// getClosedDI returns DI of issues created between startTime and endTime
 // only non-empty repo and sig will be involved
-func getCreatedDIBetweenTime(db *sql.DB, repo, sig string, startTime, endTime time.Time) (float64, error) {
+func getCreatedDI(db *sql.DB, repo, sig string, startTime, endTime time.Time) (float64, error) {
     if db == nil {
         return 0, errors.New("db is nil")
     }
@@ -120,9 +120,9 @@ func getCreatedDIBetweenTime(db *sql.DB, repo, sig string, startTime, endTime ti
     return di, nil
 }
 
-// getClosedDIBetweenTime returns DI of issues closed between startTime and endTime
+// getClosedDI returns DI of issues closed between startTime and endTime
 // only non-empty repo and sig will be involved
-func getClosedDIBetweenTime(db *sql.DB, repo, sig string, startTime, endTime time.Time) (float64, error) {
+func getClosedDI(db *sql.DB, repo, sig string, startTime, endTime time.Time) (float64, error) {
     if db == nil {
         return 0, errors.New("db is nil")
     }
