@@ -34,9 +34,9 @@ func getLabels(db *sql.DB, issue Issue) (map[string][]string, error) {
     ctx, cancel := context.WithTimeout(context.Background(), mysqlQueryTimeout)
     defer cancel()
     rows, err := db.QueryContext(ctx, `SELECT NAME 
-                                        	  FROM LABEL_ISSUE_RELATIONSHIP, LABEL 
-                                        	  WHERE LABEL_ISSUE_RELATIONSHIP.ISSUE_ID = ? 
-                                       		  AND LABEL_ISSUE_RELATIONSHIP.LABEL_ID = LABEL.ID`, issue.ID)
+                                            FROM LABEL_ISSUE_RELATIONSHIP, LABEL 
+                                        	WHERE LABEL_ISSUE_RELATIONSHIP.ISSUE_ID = ? 
+                                            AND LABEL_ISSUE_RELATIONSHIP.LABEL_ID = LABEL.ID`, issue.ID)
 
     if err != nil {
         return nil, err
@@ -68,16 +68,16 @@ func getLabels(db *sql.DB, issue Issue) (map[string][]string, error) {
 func generateQuery(query, repo, sig string) string {
     if len(repo) > 0 {
         query += ` AND REPOSITORY_ID = (
-                                SELECT ID 
-                                FROM REPOSITORY
-                                WHERE REPO_NAME = '` + repo + `')`
+                    SELECT ID
+                    FROM REPOSITORY
+                    WHERE REPO_NAME = '` + repo + `')`
     }
     if len(sig) > 0 {
         query += ` AND ID IN (
-                                SELECT ISSUE_ID
-                                FROM LABEL_ISSUE_RELATIONSHIP
-                                    LEFT JOIN LABEL ON LABEL_ISSUE_RELATIONSHIP.LABEL_ID = LABEL.ID
-                                WHERE LABEL.NAME = '` + sig + `')`
+                    SELECT ISSUE_ID
+                    FROM LABEL_ISSUE_RELATIONSHIP
+                        LEFT JOIN LABEL ON LABEL_ISSUE_RELATIONSHIP.LABEL_ID = LABEL.ID
+                    WHERE LABEL.NAME = '` + sig + `')`
     }
     return query
 }
