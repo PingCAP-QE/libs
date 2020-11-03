@@ -77,7 +77,7 @@ func generateQuery(query, repo, sig string) string {
                                 SELECT ISSUE_ID
                                 FROM LABEL_ISSUE_RELATIONSHIP
                                     LEFT JOIN LABEL ON LABEL_ISSUE_RELATIONSHIP.LABEL_ID = LABEL.ID
-                                WHERE LABEL.NAME = 'sig/` + sig + `')`
+                                WHERE LABEL.NAME = '` + sig + `')`
     }
     return query
 }
@@ -193,25 +193,25 @@ func getDI(db *sql.DB, repo, sig string, time time.Time) (float64, error) {
 }
 
 // insertIntervalDI inserts an IntervalDI into table (not committed)
-func insertIntervalDI(tx *sql.Tx, table string, repo string, di IntervalDI) error {
-    _, err := tx.Exec(`INSERT INTO `+table+`(REPO, START_TIME, END_TIME, DI) VALUES(?, ?, ?, ?)`, repo, di.StartTime, di.EndTime, di.Value)
+func insertIntervalDI(tx *sql.Tx, table string, repo, sig string, di IntervalDI) error {
+    _, err := tx.Exec(`INSERT INTO `+table+`(REPO, SIG, START_TIME, END_TIME, DI) VALUES(?, ?, ?, ?, ?)`, repo, sig, di.StartTime, di.EndTime, di.Value)
     return err
 }
 
 // insertIntervalDI inserts an InstantDI into table (not committed)
-func insertInstantDI(tx *sql.Tx, table string, repo string, di InstantDI) error {
-    _, err := tx.Exec(`INSERT INTO `+table+`(REPO, TIME, DI) VALUES(?, ?, ?)`, repo, di.Time, di.Value)
+func insertInstantDI(tx *sql.Tx, table string, repo, sig string, di InstantDI) error {
+    _, err := tx.Exec(`INSERT INTO `+table+`(REPO, SIG, TIME, DI) VALUES(?, ?, ?, ?)`, repo, sig, di.Time, di.Value)
     return err
 }
 
 // storeIntervalDI inserts an array of IntervalDI into table and commits
-func storeIntervalDI(db *sql.DB, table string, repo string, dis []IntervalDI) error {
+func storeIntervalDI(db *sql.DB, table string, repo, sig string, dis []IntervalDI) error {
     tx, err := db.Begin()
     if err != nil {
         return err
     }
     for _, di := range dis {
-        if err := insertIntervalDI(tx, table, repo, di); err != nil {
+        if err := insertIntervalDI(tx, table, repo, sig, di); err != nil {
             return err
         }
     }
@@ -220,13 +220,13 @@ func storeIntervalDI(db *sql.DB, table string, repo string, dis []IntervalDI) er
 }
 
 // storeInstantDI inserts an array of InstantDI into table and commits
-func storeInstantDI(db *sql.DB, table string, repo string, dis []InstantDI) error {
+func storeInstantDI(db *sql.DB, table string, repo, sig string, dis []InstantDI) error {
     tx, err := db.Begin()
     if err != nil {
         return err
     }
     for _, di := range dis {
-        if err := insertInstantDI(tx, table, repo, di); err != nil {
+        if err := insertInstantDI(tx, table, repo, sig, di); err != nil {
             return err
         }
     }

@@ -42,12 +42,14 @@ type Issue struct {
     Label        map[string][]string
 }
 
+// Interval DI struct
 type IntervalDI struct {
     StartTime time.Time
     EndTime   time.Time
     Value     float64
 }
 
+// Instant DI struct
 type InstantDI struct {
     Time  time.Time
     Value float64
@@ -100,52 +102,4 @@ func parseIssues(rows *sql.Rows) ([]Issue, error) {
     }
 
     return issues, nil
-}
-
-// GetCreatedDIsFrom gets issue information from db, returns CreatedDI of each interval of fixed length from a specified time
-func getCreatedDIsFrom(db *sql.DB, startTime time.Time, frequency time.Duration) ([]IntervalDI, error) {
-    dis := make([]IntervalDI, 0)
-
-    for startTime.Before(time.Now()) {
-        endTime := startTime.Add(frequency)
-
-        di, err := getCreatedDIBetweenTime(db, "", "", startTime, endTime)
-        if err != nil {
-            return nil, err
-        }
-
-        dis = append(dis, IntervalDI{
-            StartTime: startTime,
-            EndTime:   endTime,
-            Value:     di,
-        })
-
-        startTime = endTime
-    }
-
-    return dis, nil
-}
-
-// getCreatedDIsFrom gets issue information from db, returns CreatedDI of each interval of fixed length from a specified time
-func getClosedDIsFrom(db *sql.DB, startTime time.Time, frequency time.Duration) ([]IntervalDI, error) {
-    dis := make([]IntervalDI, 0)
-
-    for startTime.Before(time.Now()) {
-        endTime := startTime.Add(frequency)
-
-        di, err := getClosedDIBetweenTime(db, "", "", startTime, endTime)
-        if err != nil {
-            return nil, err
-        }
-
-        dis = append(dis, IntervalDI{
-            StartTime: startTime,
-            EndTime:   endTime,
-            Value:     di,
-        })
-
-        startTime = endTime
-    }
-
-    return dis, nil
 }

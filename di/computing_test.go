@@ -25,18 +25,6 @@ import (
 
 var issueDB *sql.DB
 
-func must(t *testing.T, value interface{}, expected interface{}, name string) {
-    if expected != value {
-        t.Fatalf("%v = %v, expected %v", name, value, expected)
-    }
-}
-
-func mustNot(t *testing.T, value interface{}, unexpected interface{}, name string) {
-    if unexpected == value {
-        t.Fatalf("%v must not be %v", name, unexpected)
-    }
-}
-
 func init() {
     dsn := os.Getenv("GITHUB_DSN")
     var err error
