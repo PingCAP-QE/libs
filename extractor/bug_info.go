@@ -12,20 +12,21 @@ import (
 
 var (
 	ErrInvalidVersionInterval = errors.New("invalid version interval")
-	ErrInvalidSemver          = errors.New("Invalid semver")
+	ErrInvalidSemver          = errors.New("invalid semver")
+	ErrInvalidContent         = errors.New("invalid content")
 	ErrVersionGap             = errors.New("missing some versions between affected-version & fixed-version")
 	ErrFieldEmpty             = errors.New("field is empty")
 )
 
 var githubIssueCommentTemplate = regexp.MustCompile(`<!--(.*?\s*)*?-->`)
-var versionTemplate = regexp.MustCompile(`\d+\.\d+\.\d+|master|unplanned|unplaned`)
+var versionTemplate = regexp.MustCompile(`\[?v?\d+\.\d+\.\d+|master|unplanned|unplaned\]?`)
 
 // parse 3 kinds of inputs
 // 1. [v4.0.1:v4.0.11] -> [$version $delimiter $version]
 // 2. [:v4.0.11] -> [$delimiter $version]
 // 3. v4.0.11 -> $version
 // so the whole regexp is: [$version $delimiter $version] | [$delimiter $version] | $version
-var versionIntervalTemplate = regexp.MustCompile(`\[v?(\d+\.\d+\.\d+)\s?(:|：|,|，)\s?v?(\d+\.\d+\.\d+)\]|\[\s?(:|：|,|，)\s?v?(\d+\.\d+\.\d+)\]|v?(\d+\.\d+\.\d+|master|unreleased)`)
+var versionIntervalTemplate = regexp.MustCompile(`\[v?(\d+\.\d+\.\d+)\s?(:|：|,|，)\s?v?(\d+\.\d+\.\d+)\]|\[\s?(:|：|,|，)\s?v?(\d+\.\d+\.\d+)\]|\[?v?(\d+\.\d+\.\d+|master|unreleased)\]?`)
 
 type BugInfos struct {
 	AllTriggerConditions string
@@ -83,6 +84,16 @@ var requiredFields = map[string]struct{}{
 	"FixedVersions":    {},
 }
 
+var replaced = []string{",", "，", " ", "\t", "\n"}
+
+func replace(src string, old []string, new string) string {
+	for _, s := range old {
+		src = strings.ReplaceAll(src, s, new)
+	}
+
+	return src
+}
+
 // ParseCommentBody extract BugInfos from githubCommentBody comment
 func ParseCommentBody(githubCommentBody string) (*BugInfos, map[string][]error) {
 	githubCommentBody = cleanupComment(githubCommentBody)
@@ -114,10 +125,12 @@ func ParseCommentBody(githubCommentBody string) (*BugInfos, map[string][]error) 
 	if err != nil {
 		errM["AffectedVersions"] = append(errM["AffectedVersions"], err)
 	} else {
-		if len(versions) > 0 && len(expandedVersions) == 0 { // has value but didn't match by regexp
-			errM["AffectedVersions"] = append(errM["AffectedVersions"], ErrInvalidSemver)
-		} else {
-			info.AffectedVersions = append(info.AffectedVersions, expandedVersions...)
+		info.AffectedVersions = append(info.AffectedVersions, expandedVersions...)
+
+		unwanted := versionIntervalTemplate.ReplaceAllString(versions, "")
+		if len(replace(unwanted, replaced, "")) > 0 { // has value but didn't match by regexp
+			err := fmt.Errorf("%w, got unexpected content: %s", ErrInvalidContent, unwanted)
+			errM["AffectedVersions"] = append(errM["AffectedVersions"], err)
 		}
 	}
 
@@ -130,12 +143,12 @@ func ParseCommentBody(githubCommentBody string) (*BugInfos, map[string][]error) 
 			info.FixedVersions[i] = "master"
 		}
 	}
-	if len(versions) > 0 && len(info.FixedVersions) == 0 { // has value but didn't match by regexp
-		errM["FixedVersions"] = append(errM["FixedVersions"], ErrInvalidSemver)
-	}
 
-	// HARDCODE: hardcoding some field names
-	// validate result
+	unwanted := versionTemplate.ReplaceAllString(versions, "")
+	if len(replace(unwanted, replaced, "")) > 0 { // besides delimeters and spaces, there is still unmatched content
+		err := fmt.Errorf("%w, got unexpected content: %s", ErrInvalidContent, unwanted)
+		errM["FixedVersions"] = append(errM["FixedVersions"], err)
+	}
 
 	// 1. if any field's length equals zero, append errM[$fieldname] with ErrFieldEmpty
 	v := reflect.ValueOf(*info)
@@ -195,7 +208,6 @@ func getAffectedVersions(version string) ([]string, error) {
 	matches := versionIntervalTemplate.FindAllStringSubmatch(version, -1)
 	result := make([]string, 0)
 
-	// HARDCODE: hardcoding parser
 	for _, match := range matches {
 		match = stripEmpty(match)
 
