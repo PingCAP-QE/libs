@@ -18,7 +18,7 @@ var (
 	ErrFieldEmpty             = errors.New("field is empty")
 )
 
-var githubIssueCommentTemplate = regexp.MustCompile(`<!--(.*?\s*)*?-->`)
+var githubIssueCommentTemplate = regexp.MustCompile(`<!--(.|\s)*?-->`)
 var versionTemplate = regexp.MustCompile(`\[?v?\d+\.\d+\.\d+|master|unplanned|unplaned\]?`)
 
 // parse 3 kinds of inputs

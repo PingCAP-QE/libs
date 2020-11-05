@@ -62,18 +62,19 @@ func TestParseCommentBodyFromIssue(t *testing.T) {
 	comments, _, err := client.Issues.ListComments(context.TODO(), owner, repo, issueNum, nil)
 	must(err)
 
-	var infos *BugInfos
 	for _, c := range comments {
 		if ContainsBugTemplate(*c.Body) {
-			infos, _ = ParseCommentBody(*c.Body)
+			infos, errs := ParseCommentBody(*c.Body)
+
+			v := reflect.ValueOf(*infos)
+			for i := 0; i < v.NumField(); i++ {
+				t.Log(v.Type().Field(i).Name, ":", v.Field(i))
+
+				t.Log("-------------------------")
+			}
+
+			t.Log(errs)
 		}
-	}
-
-	v := reflect.ValueOf(*infos)
-	for i := 0; i < v.NumField(); i++ {
-		t.Log(v.Type().Field(i).Name, ":", v.Field(i))
-
-		t.Log("-------------------------")
 	}
 }
 
