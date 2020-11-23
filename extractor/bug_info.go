@@ -37,18 +37,23 @@ type BugInfos struct {
 	FixedVersions        []string
 }
 
-func getStringInBetween(s string, startStr, endStr string) string {
+// getStringInBetween returns s[startIndex+len(startStr): endIndex+1], s[endIndex:]
+func getStringInBetween(s string, startStr, endStr string) (string, string) {
 	startIndex := strings.Index(s, startStr)
-	endIndex := strings.Index(s, endStr)
-
 	if startIndex == -1 {
-		return ""
+		return "", s
 	}
 
+	endIndex := strings.Index(s[startIndex:], endStr)
 	if endIndex == -1 {
 		endIndex = len(s)
+	} else {
+		endIndex += startIndex
 	}
 
+	newS := s[endIndex:]
+
+	// strip empty lines
 	s = s[startIndex+len(startStr) : endIndex]
 	lines := strings.Split(s, "\n")
 	values := make([]string, 0, len(lines))
@@ -59,7 +64,7 @@ func getStringInBetween(s string, startStr, endStr string) string {
 		}
 	}
 
-	return strings.Join(values, "\n")
+	return strings.Join(values, "\n"), newS
 }
 
 // cleanupComment removes markdown comment strings from s
@@ -104,23 +109,23 @@ func ParseCommentBody(githubCommentBody string) (*BugInfos, map[string][]error) 
 
 	startStr = templates[0]
 	endStr = templates[1]
-	info.RCA = getStringInBetween(githubCommentBody, startStr, endStr)
+	info.RCA, githubCommentBody = getStringInBetween(githubCommentBody, startStr, endStr)
 
 	startStr = templates[1]
 	endStr = templates[2]
-	info.Symptom = getStringInBetween(githubCommentBody, startStr, endStr)
+	info.Symptom, githubCommentBody = getStringInBetween(githubCommentBody, startStr, endStr)
 
 	startStr = templates[2]
 	endStr = templates[3]
-	info.AllTriggerConditions = getStringInBetween(githubCommentBody, startStr, endStr)
+	info.AllTriggerConditions, githubCommentBody = getStringInBetween(githubCommentBody, startStr, endStr)
 
 	startStr = templates[3]
 	endStr = templates[4]
-	info.Workaround = getStringInBetween(githubCommentBody, startStr, endStr)
+	info.Workaround, githubCommentBody = getStringInBetween(githubCommentBody, startStr, endStr)
 
 	startStr = templates[4]
 	endStr = templates[5]
-	versions := getStringInBetween(githubCommentBody, startStr, endStr)
+	versions, githubCommentBody := getStringInBetween(githubCommentBody, startStr, endStr)
 	expandedVersions, err := getAffectedVersions(versions)
 	if err != nil {
 		errM["AffectedVersions"] = append(errM["AffectedVersions"], err)
@@ -136,7 +141,7 @@ func ParseCommentBody(githubCommentBody string) (*BugInfos, map[string][]error) 
 
 	startStr = templates[5]
 	endStr = "****end****"
-	versions = getStringInBetween(githubCommentBody, startStr, endStr)
+	versions, _ = getStringInBetween(githubCommentBody, startStr, endStr)
 	info.FixedVersions = append(info.FixedVersions, versionTemplate.FindAllString(versions, -1)...)
 	for i, v := range info.FixedVersions {
 		if v == "unplanned" || v == "unplaned" {
@@ -243,7 +248,8 @@ func getAffectedVersions(version string) ([]string, error) {
 			}
 
 			if start.Major != end.Major ||
-				start.Minor != end.Minor {
+				start.Minor != end.Minor ||
+				start.Patch > end.Patch {
 				return nil, ErrInvalidVersionInterval
 			}
 
@@ -276,11 +282,12 @@ func expandVersion(start, end *semver.Version) []string {
 }
 
 func ContainsBugTemplate(comment string) bool {
-	// didn't find out a nice regexp pattern
+	idx := 0
 	for _, tem := range templates {
-		if !strings.Contains(comment, tem) {
+		if idx = strings.Index(comment, tem); idx == -1 {
 			return false
 		}
+		comment = comment[idx+len(tem):]
 	}
 
 	return true
