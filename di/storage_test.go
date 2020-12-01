@@ -48,13 +48,12 @@ func clearDB(db *sql.DB) {
         log.Fatal(err)
     }
     tx.Commit()
-    clearDB(diDB)
 }
 
 func TestInsertIntervalDI(t *testing.T) {
     tx, err := diDB.Begin()
     must(t, err, nil, "err")
-    err = insertIntervalDI(tx, "CREATED_DI", "test", IntervalDI{
+    err = insertIntervalDI(tx, "CREATED_DI", "test", "", IntervalDI{
         StartTime: time.Now().AddDate(0, 0, -7),
         EndTime:   time.Now(),
         Value:     10,
@@ -67,7 +66,7 @@ func TestInsertIntervalDI(t *testing.T) {
 func TestInsertInstantDI(t *testing.T) {
     tx, err := diDB.Begin()
     must(t, err, nil, "err")
-    err = insertInstantDI(tx, "DI", "test", InstantDI{
+    err = insertInstantDI(tx, "DI", "test", "", InstantDI{
         Time:  time.Now(),
         Value: 20,
     })
@@ -79,7 +78,7 @@ func TestInsertInstantDI(t *testing.T) {
 func TestStoreIntervalDI(t *testing.T) {
     dis := []IntervalDI{{time.Now(), time.Now().AddDate(0, 0, -7), 10},
         {time.Now().AddDate(0, 0, -7), time.Now().AddDate(0, 0, -14), 20}}
-    err := storeIntervalDI(diDB, "CREATED_DI", "test", dis)
+    err := storeIntervalDI(diDB, "CREATED_DI", "test", "sig/test", dis)
     must(t, err, nil, "err")
     clearDB(diDB)
 }
@@ -87,7 +86,23 @@ func TestStoreIntervalDI(t *testing.T) {
 func TestStoreInstantDI(t *testing.T) {
     dis := []InstantDI{{time.Now(), 10},
         {time.Now().AddDate(0, 0, -7), 20}}
-    err := storeInstantDI(diDB, "CREATED_DI", "test", dis)
+    err := storeInstantDI(diDB, "DI", "test", "sig/test", dis)
     must(t, err, nil, "err")
     clearDB(diDB)
+}
+
+func TestGetCreatedDi(t *testing.T) {
+    startTime := time.Date(2020, 9, 7, 0, 0, 0, 0, time.UTC)
+    endTime := time.Date(2020, 9, 14, 0, 0, 0, 0, time.UTC)
+    di, err := getCreatedDI(issueDB, "tidb", "sig/execution", startTime, endTime)
+    must(t, err, nil, "err")
+    must(t, di, 3.0, "di")
+}
+
+func TestGetClosedDI(t *testing.T) {
+    startTime := time.Date(2020, 9, 7, 0, 0, 0, 0, time.UTC)
+    endTime := time.Date(2020, 9, 14, 0, 0, 0, 0, time.UTC)
+    di, err := getClosedDI(issueDB, "tidb", "", startTime, endTime)
+    must(t, err, nil, "err")
+    must(t, di, 107.0, "di")
 }
