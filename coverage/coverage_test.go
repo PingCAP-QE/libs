@@ -1,6 +1,8 @@
 package coverage
 
-import "testing"
+import (
+    "testing"
+)
 
 func TestProcessCoverage(t *testing.T) {
     err := ProcessCoverage("pingcap", "tidb")
