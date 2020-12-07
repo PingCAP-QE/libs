@@ -13,7 +13,7 @@ import (
 )
 
 // ProcessCoverage gets the coverage of {owner}/{repo} after each commit in the past year through codecov's API, saves into mysql
-func ProcessCoverage(owner, repo string) {
+func ProcessCoverage(owner, repo, token string) {
 	log.Printf("Processing %s\n", owner+"/"+repo)
 	client := http.Client{}
 	req, err := http.NewRequest("GET", "https://codecov.io/api/gh/"+owner+"/"+repo+"/branch/master/graphs/commits.json?method=min&agg=day&time=365d&inc=totals&order=asc", strings.NewReader(""))
@@ -21,7 +21,7 @@ func ProcessCoverage(owner, repo string) {
 		panic(err)
 	}
 
-	req.Header.Set("Authorization", "token a3a4a9847e4b4e30b1ddc4dd725bf110")
+	req.Header.Set("Authorization", "token "+token)
 
 	resp, err := client.Do(req)
 	if err != nil {
