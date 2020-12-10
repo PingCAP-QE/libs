@@ -66,7 +66,7 @@ func ProcessCoverage(owner, repo string) error {
 
 	tx.Commit()
 
-	log.Printf("Finish %sn", owner+"/"+repo)
+	log.Printf("Finish %s\n", owner+"/"+repo)
 
 	return nil
 }
