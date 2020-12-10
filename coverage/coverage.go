@@ -3,6 +3,7 @@ package coverage
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -42,6 +43,10 @@ func ProcessCoverage(db *sql.DB, owner, repo string) error {
 	}
 
 	commits := message.(map[string]interface{})["commits"]
+	if commits == nil {
+		return fmt.Errorf("cannot find coverage of %v/%v", owner, repo)
+	}
+
 	for _, commit := range commits.([]interface{}) {
 		timestamp := commit.(map[string]interface{})["timestamp"]
 		totals := commit.(map[string]interface{})["totals"]
