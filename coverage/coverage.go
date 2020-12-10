@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -15,7 +14,7 @@ import (
 )
 
 // ProcessCoverage gets the coverage of {owner}/{repo} after each commit in the past year through codecov's API, saves into mysql
-func ProcessCoverage(owner, repo string) error {
+func ProcessCoverage(db *sql.DB, owner, repo string) error {
 	log.Printf("Processing %s\n", owner+"/"+repo)
 	client := http.Client{}
 	req, err := http.NewRequest("GET", "https://codecov.io/api/gh/"+owner+"/"+repo+"/branch/master/graphs/commits.json?method=min&agg=day&time=365d&inc=totals&order=asc", strings.NewReader(""))
@@ -37,10 +36,6 @@ func ProcessCoverage(owner, repo string) error {
 
 	json.Unmarshal(body, &message)
 
-	db, err := sql.Open("mysql", os.Getenv("GITHUB_DSN"))
-	if err != nil {
-		return err
-	}
 	tx, err := db.Begin()
 	if err != nil {
 		return err
