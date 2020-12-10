@@ -58,7 +58,7 @@ func ProcessCoverage(owner, repo string) error {
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec("INSERT INTO coverage_timeline(repo, time, coverage) VALUES(?, ?, ?)", repo, t, coverage)
+		_, err = tx.Exec("INSERT INTO coverage_timeline(repo_id, time, coverage) SELECT id, ?, ? FROM repository WHERE repo_name = ?", t, coverage, repo)
 		if err != nil {
 			return err
 		}
