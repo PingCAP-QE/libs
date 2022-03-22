@@ -41,6 +41,13 @@ func ProcessCoverage(db *sql.DB, owner, repo string) error {
 	if err != nil {
 		return err
 	}
+	defer func(){
+		if err != nil {
+			if err1 := tx.Rollback(); err1 != nil {
+				panic(err1)
+			}
+		}
+	}()
 
 	commits := message.(map[string]interface{})["commits"]
 	if commits == nil {
