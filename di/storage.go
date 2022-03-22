@@ -210,6 +210,13 @@ func storeIntervalDI(db *sql.DB, table string, repo, sig string, dis []IntervalD
     if err != nil {
         return err
     }
+    defer func(){
+        if err != nil {
+            if err1 := tx.Rollback(); err1 != nil {
+                panic(err1)
+            }
+        }
+    }()
     for _, di := range dis {
         if err := insertIntervalDI(tx, table, repo, sig, di); err != nil {
             return err
@@ -225,6 +232,13 @@ func storeInstantDI(db *sql.DB, table string, repo, sig string, dis []InstantDI)
     if err != nil {
         return err
     }
+    defer func(){
+        if err != nil {
+            if err1 := tx.Rollback(); err1 != nil {
+                panic(err1)
+            }
+        }
+    }()
     for _, di := range dis {
         if err := insertInstantDI(tx, table, repo, sig, di); err != nil {
             return err
