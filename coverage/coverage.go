@@ -37,33 +37,36 @@ func ProcessCoverage(db *sql.DB, owner, repo string) error {
 
 	json.Unmarshal(body, &message)
 
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func(){
-		if err != nil {
-			if err1 := tx.Rollback(); err1 != nil {
-				panic(err1)
-			}
-		}
-	}()
-
 	commits := message.(map[string]interface{})["commits"]
 	if commits == nil {
 		return fmt.Errorf("cannot find coverage of %v/%v", owner, repo)
 	}
 
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	fmt.Println("coverage txn begin")
+	defer func(){
+		if err != nil {
+			fmt.Println("coverage txn rollback")
+			if err1 := tx.Rollback(); err1 != nil {
+				panic(err1)
+			}
+		}
+	}()
 	for _, commit := range commits.([]interface{}) {
 		timestamp := commit.(map[string]interface{})["timestamp"]
 		totals := commit.(map[string]interface{})["totals"]
-		coverage, err := strconv.ParseFloat(totals.(map[string]interface{})["c"].(string), 64)
-		if err != nil {
-			return err
+		coverage, errC := strconv.ParseFloat(totals.(map[string]interface{})["c"].(string), 64)
+		if errC != nil {
+			err = errC
+			return errC
 		}
-		t, err := time.Parse("2006-01-02 15:04:05", timestamp.(string))
-		if err != nil {
-			return err
+		t, errT := time.Parse("2006-01-02 15:04:05", timestamp.(string))
+		if errT != nil {
+			err = errT
+			return errT
 		}
 		_, err = tx.Exec("INSERT INTO coverage_timeline(repo_id, time, coverage) SELECT id, ?, ? FROM repository WHERE repo_name = ?", t, coverage, repo)
 		if err != nil {
@@ -72,6 +75,7 @@ func ProcessCoverage(db *sql.DB, owner, repo string) error {
 	}
 
 	tx.Commit()
+	fmt.Println("coverage txn commit")
 
 	log.Printf("Finish %s\n", owner+"/"+repo)
 

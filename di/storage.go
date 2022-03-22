@@ -17,6 +17,7 @@ import (
     "context"
     "database/sql"
     "errors"
+    "fmt"
     "log"
     "strings"
     "time"
@@ -210,19 +211,22 @@ func storeIntervalDI(db *sql.DB, table string, repo, sig string, dis []IntervalD
     if err != nil {
         return err
     }
+    fmt.Println("interval di txn begin")
     defer func(){
         if err != nil {
+            fmt.Println("interval di txn rollback")
             if err1 := tx.Rollback(); err1 != nil {
                 panic(err1)
             }
         }
     }()
     for _, di := range dis {
-        if err := insertIntervalDI(tx, table, repo, sig, di); err != nil {
+        if err = insertIntervalDI(tx, table, repo, sig, di); err != nil {
             return err
         }
     }
     tx.Commit()
+    fmt.Println("interval di txn commit")
     return nil
 }
 
@@ -232,18 +236,21 @@ func storeInstantDI(db *sql.DB, table string, repo, sig string, dis []InstantDI)
     if err != nil {
         return err
     }
+    fmt.Println("instant di txn begin")
     defer func(){
         if err != nil {
+            fmt.Println("instant di txn rollback")
             if err1 := tx.Rollback(); err1 != nil {
                 panic(err1)
             }
         }
     }()
     for _, di := range dis {
-        if err := insertInstantDI(tx, table, repo, sig, di); err != nil {
+        if err = insertInstantDI(tx, table, repo, sig, di); err != nil {
             return err
         }
     }
     tx.Commit()
+    fmt.Println("instant di txn commit")
     return nil
 }
